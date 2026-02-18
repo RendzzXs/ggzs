@@ -1,0 +1,47 @@
+#!/bin/bash
+
+echo "=== AUTO FIX PTERODACTYL PANEL ==="
+
+PTERO_DIR="/var/www/pterodactyl"
+
+if [ ! -d "$PTERO_DIR" ]; then
+    echo "Folder Pterodactyl tidak ditemukan!"
+    exit 1
+fi
+
+echo "[1] Stop web server..."
+systemctl stop nginx 2>/dev/null
+systemctl stop apache2 2>/dev/null
+
+echo "[2] Backup panel lama..."
+cp -r $PTERO_DIR ${PTERO_DIR}_backup_$(date +%F_%T)
+
+echo "[3] Hapus file deface..."
+cd $PTERO_DIR
+rm -rf public/*
+rm -rf resources/views/*
+rm -rf routes/*
+
+echo "[4] Pull ulang dari repo resmi..."
+git fetch --all
+git reset --hard origin/develop
+
+echo "[5] Install dependency ulang..."
+composer install --no-dev --optimize-autoloader
+
+echo "[6] Set permission aman..."
+chown -R www-data:www-data $PTERO_DIR
+chmod -R 755 $PTERO_DIR
+chmod -R 775 storage bootstrap/cache
+
+echo "[7] Clear cache..."
+php artisan view:clear
+php artisan cache:clear
+php artisan config:clear
+
+echo "[8] Restart web server..."
+systemctl start nginx 2>/dev/null
+systemctl start apache2 2>/dev/null
+
+echo "=== SELESAI BRO ==="
+echo "Coba reload panel lo sekarang."
