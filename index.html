@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Laporan Praktikum Phlebotomy | Venipuncture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #d9e4ec 0%, #c2d0da 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, 'Roboto', 'Poppins', sans-serif;
+            padding: 2rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Container utama - efek geser dari kiri ke tengah dengan smooth animation */
+        .report-card {
+            max-width: 1000px;
+            width: 100%;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.2s ease;
+            
+            /* ANIMASI SLIDE DARI KIRI KE TENGAH (smooth) */
+            animation: slideFromLeft 0.65s cubic-bezier(0.2, 0.9, 0.3, 1.1) forwards;
+            transform: translateX(-100%); /* start di luar kiri */
+            opacity: 0;
+        }
+
+        @keyframes slideFromLeft {
+            0% {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Header dengan efek gradient dan garis aksen */
+        .header {
+            background: linear-gradient(135deg, #1a3f5c 0%, #0f2c42 100%);
+            padding: 1.8rem 2rem;
+            color: white;
+            border-bottom: 4px solid #ffb347;
+        }
+
+        .header h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .header h1 small {
+            font-size: 1rem;
+            font-weight: 400;
+            background: rgba(255,255,255,0.2);
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            backdrop-filter: blur(2px);
+        }
+
+        .date-badge {
+            background: rgba(255, 180, 71, 0.2);
+            display: inline-block;
+            padding: 0.4rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 500;
+            margin-top: 12px;
+            font-size: 1rem;
+            border-left: 3px solid #ffb347;
+        }
+
+        /* grid dua kolom untuk informasi utama */
+        .grid-2col {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.8rem;
+        }
+
+        /* styling section umum */
+        .info-section {
+            background: #f9fafc;
+            border-radius: 1.5rem;
+            padding: 1.2rem 1.5rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+            border: 1px solid #eef2f8;
+            transition: transform 0.2s;
+        }
+
+        .info-section:hover {
+            transform: translateY(-2px);
+            background: #ffffff;
+            border-color: #cfdfed;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #1f6392;
+            border-left: 5px solid #ffb347;
+            padding-left: 12px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title i {
+            font-size: 1.2rem;
+        }
+
+        .detail-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.98rem;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 6px;
+        }
+
+        .detail-label {
+            font-weight: 700;
+            min-width: 130px;
+            color: #2c3e4e;
+            background: #ecf3f8;
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .detail-value {
+            color: #1e2f3a;
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        /* alat & bahan list styling */
+        .alat-list {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .alat-list li {
+            padding: 6px 0 6px 28px;
+            position: relative;
+            font-size: 0.95rem;
+            border-bottom: 1px solid #ecf1f5;
+        }
+
+        .alat-list li:before {
+            content: "•";
+            color: #ffb347;
+            font-weight: bold;
+            font-size: 1.2rem;
+            position: absolute;
+            left: 8px;
+        }
+
+        /* tabel pasien & praktikan */
+        .personal-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .person-card {
+            background: #ffffff;
+            border-radius: 1rem;
+            padding: 1rem;
+            border: 1px solid #e4edf5;
+        }
+
+        .person-name {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #0f3b4f;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-top: 8px;
+            gap: 1rem;
+        }
+
+        .meta-tag {
+            background: #eef3fc;
+            border-radius: 30px;
+            padding: 0.2rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .hasil-praktikum {
+            background: #eef7fa;
+            border-left: 6px solid #ffb347;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            font-style: normal;
+            margin-top: 0.5rem;
+            line-height: 1.45;
+            font-weight: 500;
+            color: #124263;
+        }
+
+        /* footer kecil */
+        .footer-note {
+            margin-top: 1.8rem;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #6f8faa;
+            border-top: 1px solid #e2edf5;
+            padding-top: 1rem;
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 1rem;
+            }
+            .grid-2col {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            .header h1 {
+                font-size: 1.4rem;
+                flex-direction: column;
+                align-items: start;
+                gap: 8px;
+            }
+            .detail-label {
+                min-width: 100%;
+                margin-bottom: 2px;
+            }
+            .detail-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        /* efek smooth tambahan */
+        .report-card * {
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+
+<div class="report-card">
+    <div class="header">
+        <h1>
+            🧪 Laporan Praktikum Phlebotomy
+            <small>Pengambilan Darah Vena</small>
+        </h1>
+        <div class="date-badge">
+            📅 Hari/Tanggal: Jum'at, 08 Mei 2026
+        </div>
+    </div>
+
+    <div style="padding: 1.8rem 2rem;">
+        <!-- Bagian utama: informasi pemeriksaan dan metode -->
+        <div class="grid-2col">
+            <!-- Kolom kiri: jenis, tujuan, metode -->
+            <div class="info-section">
+                <div class="section-title">
+                    <span>🩸</span> Detail Pemeriksaan
+                </div>
+                <div class="detail-list">
+                    <div class="detail-item">
+                        <span class="detail-label">Jenis Pemeriksaan</span>
+                        <span class="detail-value">Pengambilan Darah Vena (Phlebotomy)</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Tujuan Pemeriksaan</span>
+                        <span class="detail-value">untuk mendapatkan sampel darah vena</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Metode Pemeriksaan</span>
+                        <span class="detail-value">Venipuncture</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Prinsip Pemeriksaan</span>
+                        <span class="detail-value">Menusukkan spuid ke Vena. Veni puncture yang elastis dan tidak mudah rapuh.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kolom kanan: alat dan bahan -->
+            <div class="info-section">
+                <div class="section-title">
+                    <span>🧰</span> Alat & Bahan
+                </div>
+                <ul class="alat-list">
+                    <li>🩸 tabung vacutainer K³ EDTA</li>
+                    <li>🩹 Tourniquet</li>
+                    <li>💉 spuid 3 ml</li>
+                    <li>🍶 kapas alkohol</li>
+                    <li>🧻 kapas kering</li>
+                    <li>📌 plester</li>
+                    <li>🩸 Darah vena (sampel)</li>
+                </ul>
+                <div style="margin-top: 12px; font-size: 0.75rem; background:#eef1f5; border-radius: 50px; padding:0.3rem 0.8rem; display: inline-block;">
+                    ⚡ Vacutainer + Spuit 3ml
+                </div>
+            </div>
+        </div>
+
+        <!-- baris data praktikan & pasien + pengamatan -->
+        <div class="grid-2col" style="margin-bottom: 0.5rem;">
+            <!-- Praktikan -->
+            <div class="info-section">
+                <div class="section-title">
+                    <span>👩‍🔬</span> Pengamatan & Praktikan
+                </div>
+                <div class="personal-grid">
+                    <div class="person-card">
+                        <div class="person-name">👤 Praktikan : Novi Aulia Pangestu</div>
+                        <div class="meta-row">
+                            <span class="meta-tag">🎓 Mahasiswa Keschatan</span>
+                            <span class="meta-tag">⚕️ Teknik Venipuncture</span>
+                        </div>
+                    </div>
+                    <div class="person-card">
+                        <div class="person-name">🧑 Pasien : Arum Surya Ning Ratri</div>
+                        <div class="meta-row">
+                            <span class="meta-tag">🆔 Usia : — (Data tidak diisi)</span>
+                            <span class="meta-tag">🩸 Jumlah tusukan : 1 kali</span>
+                        </div>
+                    </div>
+                    <div class="detail-item" style="border-bottom: none; margin-top: 4px;">
+                        <span class="detail-label">Volume Darah</span>
+                        <span class="detail-value"><strong>3 ml</strong> (sesuai spuid)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hasil observasi & kesimpulan -->
+            <div class="info-section">
+                <div class="section-title">
+                    <span>📋</span> Hasil Praktikum
+                </div>
+                <div class="hasil-praktikum">
+                    ✨ Berdasarkan hasil praktikum atas nama <strong>Novi Aulia Pangestu</strong> telah melakukan praktikum pengambilan sampel darah vena (phlebotomy), alatnya menggunakan <strong>spuid dengan volume 3 ml</strong>. Prosedur venipuncture dilakukan dengan teknik yang tepat, satu kali tusukan, dan berhasil memperoleh sampel darah vena sebanyak 3 ml menggunakan tabung vacutainer K³ EDTA. 
+                    <br><br>
+                    📌 <em>Kesimpulan</em> : Praktikan mampu melakukan pengambilan darah vena sesuai dengan prinsip venipuncture, menjaga kesterilan alat, serta efektif mengumpulkan sampel untuk keperluan diagnostik.
+                </div>
+                <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+                    <span style="background:#eef3fc; padding: 4px 12px; border-radius: 30px; font-size:0.8rem;">✅ Tusukan: 1x</span>
+                    <span style="background:#eef3fc; padding: 4px 12px; border-radius: 30px; font-size:0.8rem;">💉 Volume 3 ml</span>
+                    <span style="background:#eef3fc; padding: 4px 12px; border-radius: 30px; font-size:0.8rem;">🧪 Darah vena berhasil</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ringkasan tambahan / metode sesuai detail lengkap -->
+        <div style="background: #fdfdf5; border-radius: 1.2rem; padding: 1rem 1.5rem; margin-top: 1rem; border: 1px solid #ffecb3;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between;">
+                <div style="font-weight: 700; color: #a1651c;">
+                    📖 Prinsip & Metode lengkap
+                </div>
+                <div style="font-size: 0.85rem; background: #fff0d6; padding: 4px 12px; border-radius: 24px;">
+                    Venipuncture sesuai standar
+                </div>
+            </div>
+            <div style="margin-top: 12px; font-size: 0.9rem; line-height: 1.45; color: #2c4b35;">
+                <strong>Prinsip :</strong> Menusukkan spuid ke Vena (Veni puncture) yang elastis dan tidak mudah rapuh. Darah vena diambil melalui tusukan vena superfisial menggunakan spuit 3 ml dan tabung vacutainer K³ EDTA. Tourniquet digunakan membantu distensi vena, kapas alkohol untuk desinfeksi, plester untuk menutup bekas tusukan.
+            </div>
+        </div>
+
+        <!-- footer kecil -->
+        <div class="footer-note">
+            ⚕️ Laporan resmi Praktikum Phlebotomy | Pengambilan Darah Vena | Tanggal Jum'at, 08 Mei 2026 ⚕️
+        </div>
+    </div>
+</div>
+
+<!-- Penjelasan animasi slide left to center sudah di implement di .report-card menggunakan keyframe -->
+</body>
+</html>
